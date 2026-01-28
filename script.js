@@ -19,9 +19,12 @@ class WYSIWYGEditor {
         // Sidebar state
         this.sidebarCollapsed = false;
         this.sidebarWidth = 260;
+        this.sidebarPosition = 'left'; // 'left' or 'right'
         this.isResizing = false;
         this.floatingBtnPos = { x: 20, y: 100 };
         this.isDraggingBtn = false;
+        this.bubbleHidden = false;
+        this.wasDockedBeforeHide = true; // Track state before hiding
 
         this.init();
     }
@@ -118,8 +121,191 @@ class WYSIWYGEditor {
         // Initialize floating button drag functionality
         this.initFloatingButtonDrag(hamburgerBtn);
 
+        // Initialize bubble context menu
+        this.initBubbleContextMenu(hamburgerBtn);
+
+        // Initialize view menu
+        this.initViewMenu();
+
         // Resize handle functionality
         this.initResizeHandle(sidebar, resizeHandle);
+    }
+
+    initBubbleContextMenu(hamburgerBtn) {
+        const contextMenu = document.getElementById('bubbleContextMenu');
+        const hideBubbleBtn = document.getElementById('hideBubbleBtn');
+
+        if (!contextMenu || !hideBubbleBtn) return;
+
+        // Right-click on hamburger button (both floating and docked states)
+        hamburgerBtn.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+
+            // Position context menu at cursor
+            const x = e.clientX;
+            const y = e.clientY;
+
+            // Make sure menu doesn't go off screen
+            contextMenu.style.left = `${Math.min(x, window.innerWidth - 180)}px`;
+            contextMenu.style.top = `${Math.min(y, window.innerHeight - 60)}px`;
+
+            contextMenu.classList.add('show');
+        });
+
+        // Hide option - collapses sidebar and hides bubble
+        hideBubbleBtn.addEventListener('click', () => {
+            this.hideDocumentBar();
+            contextMenu.classList.remove('show');
+        });
+
+        // Close context menu when clicking elsewhere
+        document.addEventListener('click', (e) => {
+            if (!contextMenu.contains(e.target)) {
+                contextMenu.classList.remove('show');
+            }
+        });
+
+        // Close on escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                contextMenu.classList.remove('show');
+            }
+        });
+    }
+
+    initViewMenu() {
+        const viewBtn = document.getElementById('viewBtn');
+        const viewMenu = document.getElementById('viewMenu');
+        const showDocBarBtn = document.getElementById('showDocBarBtn');
+
+        if (!viewBtn || !viewMenu) return;
+
+        // Toggle view menu
+        viewBtn.addEventListener('click', () => {
+            // Update highlight state before showing menu
+            this.updateDocBarHighlight();
+            viewMenu.classList.toggle('show');
+        });
+
+        // Close when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!viewBtn.contains(e.target) && !viewMenu.contains(e.target)) {
+                viewMenu.classList.remove('show');
+            }
+        });
+
+        // Toggle document bar option
+        if (showDocBarBtn) {
+            showDocBarBtn.addEventListener('click', () => {
+                this.toggleDocumentBarVisibility();
+                viewMenu.classList.remove('show');
+            });
+        }
+
+        // Edit View Settings option
+        const editViewSettingsBtn = document.getElementById('editViewSettingsBtn');
+        if (editViewSettingsBtn) {
+            editViewSettingsBtn.addEventListener('click', () => {
+                this.openViewSettings();
+                viewMenu.classList.remove('show');
+            });
+        }
+
+        // Initialize highlight state
+        this.updateDocBarHighlight();
+    }
+
+    updateDocBarHighlight() {
+        const showDocBarBtn = document.getElementById('showDocBarBtn');
+        if (!showDocBarBtn) return;
+
+        // Document bar is visible when bubble is not hidden
+        // (either docked sidebar OR floating bubble mode)
+        const isVisible = !this.bubbleHidden;
+
+        if (isVisible) {
+            showDocBarBtn.classList.add('enabled');
+            showDocBarBtn.innerHTML = '<i class="fas fa-columns"></i> Hide Document Bar';
+        } else {
+            showDocBarBtn.classList.remove('enabled');
+            showDocBarBtn.innerHTML = '<i class="fas fa-columns"></i> Show Document Bar';
+        }
+    }
+
+    toggleDocumentBarVisibility() {
+        // If document bar is visible (not hidden), hide it
+        // If hidden, show it
+        if (!this.bubbleHidden) {
+            this.hideDocumentBar();
+        } else {
+            this.showDocumentBar();
+        }
+    }
+
+    openViewSettings() {
+        // Placeholder for view settings modal
+        this.showNotification('View Settings coming soon!');
+    }
+
+    hideDocumentBar() {
+        const sidebar = document.getElementById('sidebar');
+        const hamburgerBtn = document.getElementById('hamburgerBtn');
+        if (!hamburgerBtn || !sidebar) return;
+
+        // Remember the state before hiding (was it docked or bubble?)
+        this.wasDockedBeforeHide = !this.sidebarCollapsed;
+
+        // If sidebar is expanded, collapse it visually (but remember it was docked)
+        if (!this.sidebarCollapsed) {
+            // Clear inline width so CSS collapsed class takes over
+            sidebar.style.width = '';
+            sidebar.classList.add('collapsed');
+            // Note: we don't set this.sidebarCollapsed = true here anymore
+            // We keep the original state so we can restore properly
+
+            // Make button floating then hide it
+            this.makeButtonFloating(hamburgerBtn);
+        }
+
+        // Hide the bubble
+        this.bubbleHidden = true;
+        hamburgerBtn.classList.add('hidden');
+        this.saveSidebarState();
+        this.updateDocBarHighlight();
+        this.showNotification('Document bar hidden.');
+    }
+
+    showDocumentBar() {
+        const sidebar = document.getElementById('sidebar');
+        const hamburgerBtn = document.getElementById('hamburgerBtn');
+        const mainContent = document.querySelector('.main-content');
+
+        if (!hamburgerBtn || !sidebar) return;
+
+        // Unhide
+        this.bubbleHidden = false;
+        hamburgerBtn.classList.remove('hidden');
+
+        // Restore to the state it was in before hiding
+        if (this.wasDockedBeforeHide) {
+            // It was docked before, so expand the sidebar
+            this.updateSidebarPosition(sidebar, mainContent);
+            this.makeButtonDocked(hamburgerBtn);
+            this.sidebarCollapsed = false;
+            sidebar.classList.remove('collapsed');
+
+            requestAnimationFrame(() => {
+                sidebar.style.width = `${this.sidebarWidth}px`;
+            });
+
+            this.updateSidebarWideClass();
+        }
+        // If it was in bubble mode before hiding, it's already in the right state
+        // (collapsed with floating button visible)
+
+        this.saveSidebarState();
+        this.updateDocBarHighlight();
+        this.showNotification('Document bar restored.');
     }
 
     loadSidebarState() {
@@ -128,7 +314,10 @@ class WYSIWYGEditor {
             const state = JSON.parse(saved);
             this.sidebarCollapsed = state.collapsed ?? false;
             this.sidebarWidth = state.width ?? 260;
+            this.sidebarPosition = state.position ?? 'left';
             this.floatingBtnPos = state.floatingBtnPos ?? { x: 20, y: 100 };
+            this.bubbleHidden = state.bubbleHidden ?? false;
+            this.wasDockedBeforeHide = state.wasDockedBeforeHide ?? true;
         }
     }
 
@@ -136,18 +325,30 @@ class WYSIWYGEditor {
         localStorage.setItem('wysiwyg_sidebar', JSON.stringify({
             collapsed: this.sidebarCollapsed,
             width: this.sidebarWidth,
-            floatingBtnPos: this.floatingBtnPos
+            position: this.sidebarPosition,
+            floatingBtnPos: this.floatingBtnPos,
+            bubbleHidden: this.bubbleHidden,
+            wasDockedBeforeHide: this.wasDockedBeforeHide
         }));
     }
 
     applySidebarState() {
         const sidebar = document.getElementById('sidebar');
         const hamburgerBtn = document.getElementById('hamburgerBtn');
+        const mainContent = document.querySelector('.main-content');
         if (!sidebar || !hamburgerBtn) return;
+
+        // Apply sidebar position
+        this.updateSidebarPosition(sidebar, mainContent);
 
         if (this.sidebarCollapsed) {
             sidebar.classList.add('collapsed');
             this.makeButtonFloating(hamburgerBtn);
+
+            // Apply bubble hidden state if applicable
+            if (this.bubbleHidden) {
+                hamburgerBtn.classList.add('hidden');
+            }
         } else {
             sidebar.classList.remove('collapsed');
             sidebar.style.width = `${this.sidebarWidth}px`;
@@ -252,6 +453,7 @@ class WYSIWYGEditor {
     toggleSidebar() {
         const sidebar = document.getElementById('sidebar');
         const hamburgerBtn = document.getElementById('hamburgerBtn');
+        const mainContent = document.querySelector('.main-content');
         if (!sidebar || !hamburgerBtn) return;
 
         this.sidebarCollapsed = !this.sidebarCollapsed;
@@ -265,6 +467,15 @@ class WYSIWYGEditor {
                 this.makeButtonFloating(hamburgerBtn);
             }, 50);
         } else {
+            // Determine which side to open based on button position
+            const screenMiddle = window.innerWidth / 2;
+            const buttonCenter = this.floatingBtnPos.x + (hamburgerBtn.offsetWidth / 2);
+            const openOnRight = buttonCenter > screenMiddle;
+
+            // Update sidebar position
+            this.sidebarPosition = openOnRight ? 'right' : 'left';
+            this.updateSidebarPosition(sidebar, mainContent);
+
             // First dock the button, then expand sidebar
             this.makeButtonDocked(hamburgerBtn);
             sidebar.classList.remove('collapsed');
@@ -276,6 +487,18 @@ class WYSIWYGEditor {
 
         this.saveSidebarState();
         this.updateSidebarWideClass();
+    }
+
+    updateSidebarPosition(sidebar, mainContent) {
+        if (!sidebar || !mainContent) return;
+
+        if (this.sidebarPosition === 'right') {
+            sidebar.classList.add('sidebar-right');
+            mainContent.classList.add('sidebar-right');
+        } else {
+            sidebar.classList.remove('sidebar-right');
+            mainContent.classList.remove('sidebar-right');
+        }
     }
 
     initResizeHandle(sidebar, resizeHandle) {
@@ -306,7 +529,14 @@ class WYSIWYGEditor {
             e.preventDefault();
             const clientX = e.clientX || e.touches?.[0]?.clientX;
             const delta = clientX - startX;
-            let newWidth = startWidth + delta;
+
+            // If sidebar is on right, dragging left increases width
+            let newWidth;
+            if (this.sidebarPosition === 'right') {
+                newWidth = startWidth - delta;
+            } else {
+                newWidth = startWidth + delta;
+            }
 
             // Minimum width is 140px, maximum is 50% of viewport
             const minWidth = 140;

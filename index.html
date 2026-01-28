@@ -19,6 +19,21 @@
                 </div>
             </div>
             <div class="header-right">
+                <!-- View Menu -->
+                <div class="dropdown">
+                    <button class="btn btn-secondary dropdown-toggle" id="viewBtn">
+                        <i class="fas fa-eye"></i> View
+                    </button>
+                    <div class="dropdown-menu" id="viewMenu">
+                        <button class="dropdown-item" id="showDocBarBtn">
+                            <i class="fas fa-columns"></i> Show Document Bar
+                        </button>
+                        <div class="dropdown-divider view-settings-divider"></div>
+                        <button class="dropdown-item view-settings-btn" id="editViewSettingsBtn">
+                            <i class="fas fa-cog"></i> Edit View Settings
+                        </button>
+                    </div>
+                </div>
                 <!-- Dark Mode Toggle -->
                 <div class="theme-toggle-wrapper">
                     <input type="checkbox" id="darkModeToggle" class="theme-toggle-input">
@@ -433,6 +448,13 @@
                 <button class="btn btn-secondary" data-modal="dictionaryModal">Close</button>
             </div>
         </div>
+    </div>
+
+    <!-- Bubble Context Menu -->
+    <div class="bubble-context-menu" id="bubbleContextMenu">
+        <button class="context-menu-item" id="hideBubbleBtn">
+            <i class="fas fa-eye-slash"></i> Hide Document Bar
+        </button>
     </div>
 
     <script src="script.js"></script>
