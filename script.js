@@ -63,10 +63,39 @@ class WYSIWYGEditor {
         this.currentFlag = 'none';
         this.flagBorderWidth = this.loadFlagBorderWidth();
 
+        // Auto-save session tracking
+        this.currentAutoSaveId = null;
+        this.sessionDocId = this.generateSessionId();
+
         // Modal state management
         this.previousModal = null;
+        this.modalClickOutside = this.loadModalClickOutside();
 
         this.init();
+    }
+
+    generateSessionId() {
+        return 'session_' + Date.now().toString() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    loadModalClickOutside() {
+        return localStorage.getItem('wysiwyg_modal_click_outside') || 'nothing';
+    }
+
+    saveModalClickOutside() {
+        localStorage.setItem('wysiwyg_modal_click_outside', this.modalClickOutside);
+    }
+
+    // Handle modal click-outside based on user preference
+    handleModalClickOutside(modalId, saveCallback, cancelCallback) {
+        if (this.modalClickOutside === 'nothing') {
+            // Do nothing - modal stays open
+            return;
+        } else if (this.modalClickOutside === 'save' && saveCallback) {
+            saveCallback();
+        } else if (this.modalClickOutside === 'cancel' && cancelCallback) {
+            cancelCallback();
+        }
     }
 
     init() {
@@ -81,6 +110,7 @@ class WYSIWYGEditor {
         this.initFolders();
         this.initAccordion();
         this.initEditMenu();
+        this.initDocumentContextMenu();
         this.bindToolbarButtons();
         this.bindSelects();
         this.bindColorPickers();
@@ -92,6 +122,7 @@ class WYSIWYGEditor {
         this.renderAutoSaveDocumentList();
         this.renderFolderList();
         this.updateCounts();
+        this.updateFlagStatusBar();
 
         // Check for expiring auto-saves on load
         this.checkExpiringAutoSaves();
@@ -367,7 +398,11 @@ class WYSIWYGEditor {
         if (themeModal) {
             themeModal.addEventListener('click', (e) => {
                 if (e.target === themeModal) {
-                    this.cancelThemeSelection();
+                    this.handleModalClickOutside(
+                        'themeModal',
+                        () => this.saveThemeSelection(),
+                        () => this.cancelThemeSelection()
+                    );
                 }
             });
         }
@@ -1720,11 +1755,24 @@ class WYSIWYGEditor {
             });
         });
 
-        // Close on backdrop click
+        // Close on backdrop click - for generic modals (link, image, table)
+        // These don't have save/cancel, so we treat them specially
         document.querySelectorAll('.modal').forEach(modal => {
+            // Skip modals that are handled elsewhere (theme, advanced settings, etc.)
+            const handledModals = [
+                'themeModal', 'advancedSettingsModal', 'toastSettingsModal',
+                'resetModal', 'createFolderModal', 'renameFolderModal', 'autoSaveWarningModal',
+                'deleteDocModal'
+            ];
+
+            if (handledModals.includes(modal.id)) return;
+
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) {
-                    this.closeModal(modal.id);
+                    // For insert modals, always just close (cancel behavior)
+                    if (this.modalClickOutside !== 'nothing') {
+                        this.closeModal(modal.id);
+                    }
                 }
             });
         });
@@ -1913,11 +1961,15 @@ class WYSIWYGEditor {
             resetConfirmBtn.addEventListener('click', () => this.resetAllData());
         }
 
-        // Close on backdrop click
+        // Close on backdrop click - Reset modal only allows cancel (no save option for safety)
         if (resetModal) {
             resetModal.addEventListener('click', (e) => {
                 if (e.target === resetModal) {
-                    this.closeResetModal();
+                    this.handleModalClickOutside(
+                        'resetModal',
+                        null, // No save action for reset modal
+                        () => this.closeResetModal()
+                    );
                 }
             });
         }
@@ -1939,6 +1991,7 @@ class WYSIWYGEditor {
             'wysiwyg_folders',
             'wysiwyg_accordion_state',
             'wysiwyg_flag_border_width',
+            'wysiwyg_modal_click_outside',
             'wysiwyg_theme' // Legacy key
         ];
 
@@ -2025,7 +2078,11 @@ class WYSIWYGEditor {
         if (modal) {
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) {
-                    this.closeAdvancedSettings();
+                    this.handleModalClickOutside(
+                        'advancedSettingsModal',
+                        () => this.saveAdvancedSettings(),
+                        () => this.closeAdvancedSettings()
+                    );
                 }
             });
         }
@@ -2079,6 +2136,7 @@ class WYSIWYGEditor {
         const limitInput = document.getElementById('autoSaveLimit');
         const deleteInput = document.getElementById('autoDeleteDays');
         const flagBorderInput = document.getElementById('flagBorderWidth');
+        const modalClickOutsideSelect = document.getElementById('modalClickOutside');
 
         // Populate current values
         if (valueInput) valueInput.value = this.autoSaveValue;
@@ -2086,6 +2144,7 @@ class WYSIWYGEditor {
         if (limitInput) limitInput.value = this.autoSaveLimit;
         if (deleteInput) deleteInput.value = this.autoDeleteDays;
         if (flagBorderInput) flagBorderInput.value = this.flagBorderWidth;
+        if (modalClickOutsideSelect) modalClickOutsideSelect.value = this.modalClickOutside;
 
         this.updateAutoSaveHint();
         modal.classList.add('show');
@@ -2101,12 +2160,14 @@ class WYSIWYGEditor {
         const limitInput = document.getElementById('autoSaveLimit');
         const deleteInput = document.getElementById('autoDeleteDays');
         const flagBorderInput = document.getElementById('flagBorderWidth');
+        const modalClickOutsideSelect = document.getElementById('modalClickOutside');
 
         const newValue = parseInt(valueInput.value) || 5;
         const newUnit = unitSelect.value;
         const newLimit = parseInt(limitInput.value) || 3;
         const newDeleteDays = parseInt(deleteInput.value) || 7;
         const newFlagBorderWidth = parseInt(flagBorderInput.value) || 3;
+        const newModalClickOutside = modalClickOutsideSelect.value;
 
         // Validate
         if (newValue < 1) {
@@ -2131,8 +2192,10 @@ class WYSIWYGEditor {
         this.autoSaveLimit = newLimit;
         this.autoDeleteDays = newDeleteDays;
         this.flagBorderWidth = newFlagBorderWidth;
+        this.modalClickOutside = newModalClickOutside;
         this.saveAutoSaveSettings();
         this.saveFlagBorderWidth();
+        this.saveModalClickOutside();
 
         // Apply flag border width immediately
         this.applyFlagToEditor();
@@ -2233,7 +2296,11 @@ class WYSIWYGEditor {
         if (modal) {
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) {
-                    this.closeToastSettings(false);
+                    this.handleModalClickOutside(
+                        'toastSettingsModal',
+                        () => this.saveToastSettingsAndClose(),
+                        () => this.closeToastSettings(false)
+                    );
                 }
             });
         }
@@ -2418,7 +2485,13 @@ class WYSIWYGEditor {
             this.createFolder();
         });
         document.getElementById('createFolderModal').addEventListener('click', (e) => {
-            if (e.target.id === 'createFolderModal') this.closeCreateFolderModal();
+            if (e.target.id === 'createFolderModal') {
+                this.handleModalClickOutside(
+                    'createFolderModal',
+                    () => this.createFolder(),
+                    () => this.closeCreateFolderModal()
+                );
+            }
         });
         document.getElementById('folderNameInput').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') this.createFolder();
@@ -2435,7 +2508,13 @@ class WYSIWYGEditor {
             this.renameFolder();
         });
         document.getElementById('renameFolderModal').addEventListener('click', (e) => {
-            if (e.target.id === 'renameFolderModal') this.closeRenameFolderModal();
+            if (e.target.id === 'renameFolderModal') {
+                this.handleModalClickOutside(
+                    'renameFolderModal',
+                    () => this.renameFolder(),
+                    () => this.closeRenameFolderModal()
+                );
+            }
         });
         document.getElementById('renameFolderInput').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') this.renameFolder();
@@ -2502,6 +2581,260 @@ class WYSIWYGEditor {
 
         const menu = document.getElementById('folderContextMenu');
         this.showContextMenu(menu, e.clientX, e.clientY);
+    }
+
+    // ==================== Document Context Menu ====================
+
+    showDocumentContextMenu(e, docId, docType) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        this.contextDocId = docId;
+        this.contextDocType = docType;
+
+        this.hideAllContextMenus();
+
+        const menu = document.getElementById('docContextMenu');
+        this.showContextMenu(menu, e.clientX, e.clientY);
+    }
+
+    showMoveToSubmenu(triggerEl) {
+        const submenu = document.getElementById('moveToSubmenu');
+        const folderList = document.getElementById('moveToFolderList');
+        const noFoldersMsg = document.getElementById('noFoldersMsg');
+        const divider = document.getElementById('moveToSubmenuDivider');
+
+        // Get current folder of the document (if any)
+        const currentFolderId = this.getDocumentFolderId(this.contextDocId, this.contextDocType);
+
+        // Populate folder list
+        if (this.folders.length === 0) {
+            folderList.innerHTML = '';
+            noFoldersMsg.style.display = 'block';
+            divider.style.display = 'none';
+        } else {
+            noFoldersMsg.style.display = 'none';
+            divider.style.display = 'block';
+            folderList.innerHTML = this.folders.map(folder => `
+                <button class="context-menu-item ${folder.id === currentFolderId ? 'active' : ''}" data-folder-id="${folder.id}">
+                    <i class="fas fa-folder"></i> ${folder.name}
+                </button>
+            `).join('');
+
+            // Bind click events for folders
+            folderList.querySelectorAll('.context-menu-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    this.moveDocToFolder(this.contextDocId, this.contextDocType, item.dataset.folderId);
+                    this.hideAllContextMenus();
+                });
+            });
+        }
+
+        // Position submenu
+        const triggerRect = triggerEl.getBoundingClientRect();
+        const menu = document.getElementById('docContextMenu');
+        const menuRect = menu.getBoundingClientRect();
+
+        submenu.style.left = `${menuRect.right - 5}px`;
+        submenu.style.top = `${triggerRect.top}px`;
+        submenu.classList.add('show');
+
+        // Adjust if goes off screen
+        const submenuRect = submenu.getBoundingClientRect();
+        if (submenuRect.right > window.innerWidth) {
+            submenu.style.left = `${menuRect.left - submenuRect.width + 5}px`;
+        }
+        if (submenuRect.bottom > window.innerHeight) {
+            submenu.style.top = `${window.innerHeight - submenuRect.height - 10}px`;
+        }
+    }
+
+    getDocumentFolderId(docId, docType) {
+        for (const folder of this.folders) {
+            const found = folder.documents.find(d => d.id === docId && d.type === docType);
+            if (found) return folder.id;
+        }
+        return null;
+    }
+
+    copyDocument(docId, docType) {
+        let originalDoc;
+
+        if (docType === 'saved') {
+            originalDoc = this.documents.find(d => d.id === docId);
+            if (!originalDoc) return;
+
+            // Create a copy
+            const copiedDoc = {
+                id: Date.now().toString(),
+                title: `${originalDoc.title} (Copy)`,
+                content: originalDoc.content,
+                flag: originalDoc.flag || 'none',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+
+            this.documents.push(copiedDoc);
+            this.saveDocuments();
+            this.renderDocumentList();
+            this.showNotification('Document copied!', 'docSave');
+        } else if (docType === 'autosave') {
+            originalDoc = this.autoSaveDocuments.find(d => d.id === docId);
+            if (!originalDoc) return;
+
+            // Create a copy as a new autosave
+            const copiedDoc = {
+                id: 'autosave_' + Date.now().toString(),
+                title: `${originalDoc.title} (Copy)`,
+                content: originalDoc.content,
+                flag: originalDoc.flag || 'none',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                expiresAt: new Date(Date.now() + (this.autoDeleteDays * 24 * 60 * 60 * 1000)).toISOString(),
+                linkedDocId: null,
+                sessionId: null
+            };
+
+            this.autoSaveDocuments.unshift(copiedDoc);
+
+            // Remove oldest if over limit
+            while (this.autoSaveDocuments.length > this.autoSaveLimit) {
+                this.autoSaveDocuments.pop();
+            }
+
+            this.saveAutoSaveDocuments();
+            this.renderAutoSaveDocumentList();
+            this.showNotification('Auto-save copied!', 'autoSave');
+        }
+    }
+
+    openDeleteDocModal(docId, docType) {
+        let doc;
+        if (docType === 'saved') {
+            doc = this.documents.find(d => d.id === docId);
+        } else {
+            doc = this.autoSaveDocuments.find(d => d.id === docId);
+        }
+
+        if (!doc) return;
+
+        document.getElementById('deleteDocTitle').textContent = doc.title;
+        this.deleteDocId = docId;
+        this.deleteDocType = docType;
+        document.getElementById('deleteDocModal').classList.add('show');
+    }
+
+    closeDeleteDocModal() {
+        document.getElementById('deleteDocModal').classList.remove('show');
+        this.deleteDocId = null;
+        this.deleteDocType = null;
+    }
+
+    confirmDeleteDocument() {
+        if (!this.deleteDocId || !this.deleteDocType) return;
+
+        if (this.deleteDocType === 'saved') {
+            this.documents = this.documents.filter(doc => doc.id !== this.deleteDocId);
+            this.saveDocuments();
+            this.removeDocFromFolder(this.deleteDocId, 'saved');
+
+            if (this.currentDocId === this.deleteDocId) {
+                this.newDocument();
+            }
+
+            this.renderDocumentList();
+            this.showNotification('Document deleted!', 'docDelete');
+        } else {
+            this.autoSaveDocuments = this.autoSaveDocuments.filter(d => d.id !== this.deleteDocId);
+            this.saveAutoSaveDocuments();
+            this.removeDocFromFolder(this.deleteDocId, 'autosave');
+            this.renderAutoSaveDocumentList();
+            this.showNotification('Auto-save deleted!', 'docDelete');
+        }
+
+        this.renderFolderList();
+        if (this.currentFolderId) {
+            this.renderFolderContents();
+        }
+
+        this.closeDeleteDocModal();
+    }
+
+    initDocumentContextMenu() {
+        const docContextMenu = document.getElementById('docContextMenu');
+        const moveToBtn = document.getElementById('moveToFolderBtn');
+        const copyBtn = document.getElementById('copyDocBtn');
+        const deleteBtn = document.getElementById('deleteDocContextBtn');
+        const moveToRootBtn = document.getElementById('moveToRootBtn');
+
+        // Show submenu on hover/click
+        moveToBtn.addEventListener('mouseenter', () => {
+            this.showMoveToSubmenu(moveToBtn);
+        });
+
+        moveToBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.showMoveToSubmenu(moveToBtn);
+        });
+
+        // Copy document
+        copyBtn.addEventListener('click', () => {
+            this.copyDocument(this.contextDocId, this.contextDocType);
+            this.hideAllContextMenus();
+        });
+
+        // Delete document
+        deleteBtn.addEventListener('click', () => {
+            this.hideAllContextMenus();
+            this.openDeleteDocModal(this.contextDocId, this.contextDocType);
+        });
+
+        // Move to root (remove from folder)
+        moveToRootBtn.addEventListener('click', () => {
+            this.removeDocFromFolder(this.contextDocId, this.contextDocType);
+            this.renderDocumentList();
+            this.renderAutoSaveDocumentList();
+            this.renderFolderList();
+            if (this.currentFolderId) {
+                this.renderFolderContents();
+            }
+            this.hideAllContextMenus();
+            this.showNotification('Moved to root', 'settings');
+        });
+
+        // Delete modal events
+        document.getElementById('deleteDocModalClose').addEventListener('click', () => {
+            this.closeDeleteDocModal();
+        });
+        document.getElementById('deleteDocCancelBtn').addEventListener('click', () => {
+            this.closeDeleteDocModal();
+        });
+        document.getElementById('deleteDocConfirmBtn').addEventListener('click', () => {
+            this.confirmDeleteDocument();
+        });
+        document.getElementById('deleteDocModal').addEventListener('click', (e) => {
+            if (e.target.id === 'deleteDocModal') {
+                this.handleModalClickOutside(
+                    'deleteDocModal',
+                    null,
+                    () => this.closeDeleteDocModal()
+                );
+            }
+        });
+
+        // Hide submenu when leaving the menu area
+        docContextMenu.addEventListener('mouseleave', (e) => {
+            const submenu = document.getElementById('moveToSubmenu');
+            const submenuRect = submenu.getBoundingClientRect();
+
+            // Check if mouse is moving to submenu
+            if (e.clientX >= submenuRect.left && e.clientX <= submenuRect.right &&
+                e.clientY >= submenuRect.top && e.clientY <= submenuRect.bottom) {
+                return;
+            }
+
+            submenu.classList.remove('show');
+        });
     }
 
     openCreateFolderModal() {
@@ -2764,6 +3097,13 @@ class WYSIWYGEditor {
                 this.renderFolderContents();
                 this.showNotification('Removed from folder', 'settings');
             });
+
+            // Right-click context menu
+            item.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.showDocumentContextMenu(e, docId, docType);
+            });
         });
     }
 
@@ -2881,11 +3221,18 @@ class WYSIWYGEditor {
         const saved = localStorage.getItem('wysiwyg_autosave_settings');
         if (saved) {
             const settings = JSON.parse(saved);
-            this.autoSaveEnabled = settings.enabled ?? false;
+            this.autoSaveEnabled = settings.enabled ?? true;
             this.autoSaveValue = settings.value ?? 5;
             this.autoSaveUnit = settings.unit ?? 'minutes';
             this.autoSaveLimit = settings.limit ?? 3;
             this.autoDeleteDays = settings.autoDeleteDays ?? 7;
+        } else {
+            // Default settings - auto-save enabled by default
+            this.autoSaveEnabled = true;
+            this.autoSaveValue = 5;
+            this.autoSaveUnit = 'minutes';
+            this.autoSaveLimit = 3;
+            this.autoDeleteDays = 7;
         }
     }
 
@@ -2993,12 +3340,37 @@ class WYSIWYGEditor {
         const title = document.getElementById('docTitle').value || 'Untitled Document';
         const now = new Date();
 
-        // Check if an auto-save for this document already exists (by title or if we're editing an auto-save)
-        const existingIndex = this.autoSaveDocuments.findIndex(doc => doc.title === title);
+        // If we're editing a saved document, update the saved document directly
+        if (this.currentDocId) {
+            const index = this.documents.findIndex(doc => doc.id === this.currentDocId);
+            if (index !== -1) {
+                this.documents[index].title = title;
+                this.documents[index].content = content;
+                this.documents[index].flag = this.currentFlag;
+                this.documents[index].updatedAt = now.toISOString();
+                this.saveDocuments();
+                this.renderDocumentList();
+                this.showNotification('Auto-saved', 'autoSave');
+            }
+            return;
+        }
+
+        // For unsaved documents or autosaves, use the autosave system
+        let existingIndex = -1;
+
+        if (this.currentAutoSaveId) {
+            // Editing from an auto-save - update that specific auto-save
+            existingIndex = this.autoSaveDocuments.findIndex(doc => doc.id === this.currentAutoSaveId);
+        } else if (this.sessionDocId) {
+            // New unsaved document - use session tracking
+            existingIndex = this.autoSaveDocuments.findIndex(doc => doc.sessionId === this.sessionDocId);
+        }
 
         if (existingIndex !== -1) {
             // Update existing auto-save
+            this.autoSaveDocuments[existingIndex].title = title;
             this.autoSaveDocuments[existingIndex].content = content;
+            this.autoSaveDocuments[existingIndex].flag = this.currentFlag;
             this.autoSaveDocuments[existingIndex].updatedAt = now.toISOString();
             this.autoSaveDocuments[existingIndex].expiresAt = new Date(now.getTime() + (this.autoDeleteDays * 24 * 60 * 60 * 1000)).toISOString();
 
@@ -3011,10 +3383,18 @@ class WYSIWYGEditor {
                 id: 'autosave_' + Date.now().toString(),
                 title: title,
                 content: content,
+                flag: this.currentFlag,
                 createdAt: now.toISOString(),
                 updatedAt: now.toISOString(),
-                expiresAt: new Date(now.getTime() + (this.autoDeleteDays * 24 * 60 * 60 * 1000)).toISOString()
+                expiresAt: new Date(now.getTime() + (this.autoDeleteDays * 24 * 60 * 60 * 1000)).toISOString(),
+                linkedDocId: null,
+                sessionId: this.sessionDocId || null
             };
+
+            // Track which auto-save this unsaved doc belongs to
+            if (!this.currentAutoSaveId) {
+                this.currentAutoSaveId = autoSaveDoc.id;
+            }
 
             // Add to beginning of array
             this.autoSaveDocuments.unshift(autoSaveDoc);
@@ -3084,6 +3464,13 @@ class WYSIWYGEditor {
                 e.stopPropagation();
                 this.deleteAutoSaveDocument(docId);
             });
+
+            // Right-click context menu
+            item.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.showDocumentContextMenu(e, docId, 'autosave');
+            });
         });
     }
 
@@ -3111,6 +3498,11 @@ class WYSIWYGEditor {
         this.editor.innerHTML = doc.content;
         document.getElementById('docTitle').value = doc.title;
         this.currentDocId = null; // Not a saved document
+
+        // Track that we're editing this auto-save
+        this.currentAutoSaveId = docId;
+        this.sessionDocId = null;
+
         this.updateCounts();
         this.renderAutoSaveDocumentList();
 
@@ -3297,6 +3689,10 @@ class WYSIWYGEditor {
         this.applyFlagToEditor();
         this.updateFlagMenuState();
 
+        // Reset auto-save session tracking for new document
+        this.currentAutoSaveId = null;
+        this.sessionDocId = this.generateSessionId();
+
         // Reset auto-save counters
         this.autoSaveWordCount = 0;
         this.autoSaveCharCount = 0;
@@ -3339,6 +3735,10 @@ class WYSIWYGEditor {
             this.editor.innerHTML = doc.content;
             document.getElementById('docTitle').value = doc.title;
             this.currentDocId = doc.id;
+
+            // Reset auto-save tracking for this saved document
+            this.currentAutoSaveId = null;
+            this.sessionDocId = null;
 
             // Load document flag
             this.currentFlag = doc.flag || 'none';
@@ -3419,6 +3819,13 @@ class WYSIWYGEditor {
                 if (!e.target.closest('.delete-btn')) {
                     this.loadDocument(item.dataset.id);
                 }
+            });
+
+            // Right-click context menu
+            item.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.showDocumentContextMenu(e, item.dataset.id, 'saved');
             });
         });
 

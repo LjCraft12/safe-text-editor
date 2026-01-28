@@ -420,8 +420,9 @@
 
                 <!-- Status Bar -->
                 <div class="status-bar">
-                    <span id="charCount">0 characters</span>
                     <span id="wordCount">0 words</span>
+                    <span id="flagStatus" class="flag-status"></span>
+                    <span id="charCount">0 characters</span>
                 </div>
             </main>
         </div>
@@ -584,113 +585,150 @@
 
     <!-- Advanced Settings Modal -->
     <div class="modal" id="advancedSettingsModal">
-        <div class="modal-content">
+        <div class="modal-content modal-lg">
             <div class="modal-header">
                 <h3><i class="fas fa-sliders-h"></i> Advanced Settings</h3>
                 <button class="modal-close" id="advancedSettingsModalClose">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="settings-section">
-                    <h4><i class="fas fa-save"></i> Auto Save</h4>
-                    <p class="settings-description">Automatically save your document at regular intervals.</p>
+                <!-- FILE SETTINGS SECTION -->
+                <div class="settings-group">
+                    <div class="settings-group-header">
+                        <i class="fas fa-file-alt"></i> File Settings
+                    </div>
 
-                    <div class="auto-save-config">
-                        <div class="config-row">
-                            <label for="autoSaveValue">Save every</label>
-                            <div class="number-input-wrapper">
-                                <input type="number" id="autoSaveValue" class="config-input" min="1" max="999" value="5">
-                                <div class="number-input-controls">
-                                    <button type="button" class="num-up" data-target="autoSaveValue"><i class="fas fa-chevron-up"></i></button>
-                                    <button type="button" class="num-down" data-target="autoSaveValue"><i class="fas fa-chevron-down"></i></button>
+                    <div class="settings-section">
+                        <h4><i class="fas fa-save"></i> Auto Save Interval</h4>
+                        <p class="settings-description">How often to automatically save your document.</p>
+
+                        <div class="auto-save-config">
+                            <div class="config-row">
+                                <label for="autoSaveValue">Save every</label>
+                                <div class="number-input-wrapper">
+                                    <input type="number" id="autoSaveValue" class="config-input" min="1" max="999" value="5">
+                                    <div class="number-input-controls">
+                                        <button type="button" class="num-up" data-target="autoSaveValue"><i class="fas fa-chevron-up"></i></button>
+                                        <button type="button" class="num-down" data-target="autoSaveValue"><i class="fas fa-chevron-down"></i></button>
+                                    </div>
                                 </div>
+                                <select id="autoSaveUnit" class="config-select">
+                                    <option value="minutes">Minutes</option>
+                                    <option value="seconds">Seconds</option>
+                                    <option value="words">Words typed</option>
+                                    <option value="characters">Characters typed</option>
+                                    <option value="changes">Changes made</option>
+                                </select>
                             </div>
-                            <select id="autoSaveUnit" class="config-select">
-                                <option value="minutes">Minutes</option>
-                                <option value="seconds">Seconds</option>
-                                <option value="words">Words typed</option>
-                                <option value="characters">Characters typed</option>
-                                <option value="changes">Changes made</option>
-                            </select>
+                            <p class="config-hint" id="autoSaveHint">Document will be saved every 5 minutes of editing.</p>
                         </div>
-                        <p class="config-hint" id="autoSaveHint">Document will be saved every 5 minutes of editing.</p>
+                    </div>
+
+                    <div class="settings-section">
+                        <h4><i class="fas fa-archive"></i> Auto-Save Storage</h4>
+                        <p class="settings-description">Maximum number of auto-saved documents to keep.</p>
+
+                        <div class="auto-save-config">
+                            <div class="config-row">
+                                <label for="autoSaveLimit">Keep up to</label>
+                                <div class="number-input-wrapper">
+                                    <input type="number" id="autoSaveLimit" class="config-input" min="1" max="99" value="3">
+                                    <div class="number-input-controls">
+                                        <button type="button" class="num-up" data-target="autoSaveLimit"><i class="fas fa-chevron-up"></i></button>
+                                        <button type="button" class="num-down" data-target="autoSaveLimit"><i class="fas fa-chevron-down"></i></button>
+                                    </div>
+                                </div>
+                                <span class="config-label">auto-saved documents</span>
+                            </div>
+                            <p class="config-hint">Oldest auto-saves will be removed when limit is reached.</p>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h4><i class="fas fa-trash-alt"></i> Auto-Delete</h4>
+                        <p class="settings-description">Automatically delete old auto-saved documents.</p>
+
+                        <div class="auto-save-config">
+                            <div class="config-row">
+                                <label for="autoDeleteDays">Delete auto-saves after</label>
+                                <div class="number-input-wrapper">
+                                    <input type="number" id="autoDeleteDays" class="config-input" min="1" max="365" value="7">
+                                    <div class="number-input-controls">
+                                        <button type="button" class="num-up" data-target="autoDeleteDays"><i class="fas fa-chevron-up"></i></button>
+                                        <button type="button" class="num-down" data-target="autoDeleteDays"><i class="fas fa-chevron-down"></i></button>
+                                    </div>
+                                </div>
+                                <span class="config-label">days</span>
+                            </div>
+                            <p class="config-hint">You'll be warned 24 hours before deletion.</p>
+                        </div>
                     </div>
                 </div>
 
-                <div class="settings-divider-line"></div>
+                <!-- DOCUMENT FLAGS SECTION -->
+                <div class="settings-group">
+                    <div class="settings-group-header">
+                        <i class="fas fa-flag"></i> Document Flags
+                    </div>
 
-                <div class="settings-section">
-                    <h4><i class="fas fa-archive"></i> Auto-Save Storage</h4>
-                    <p class="settings-description">Manage how many auto-saved documents to keep.</p>
+                    <div class="settings-section">
+                        <h4><i class="fas fa-border-style"></i> Flag Border Appearance</h4>
+                        <p class="settings-description">Configure how the flag border looks around the editor.</p>
 
-                    <div class="auto-save-config">
-                        <div class="config-row">
-                            <label for="autoSaveLimit">Keep up to</label>
-                            <div class="number-input-wrapper">
-                                <input type="number" id="autoSaveLimit" class="config-input" min="1" max="99" value="3">
-                                <div class="number-input-controls">
-                                    <button type="button" class="num-up" data-target="autoSaveLimit"><i class="fas fa-chevron-up"></i></button>
-                                    <button type="button" class="num-down" data-target="autoSaveLimit"><i class="fas fa-chevron-down"></i></button>
+                        <div class="auto-save-config">
+                            <div class="config-row">
+                                <label for="flagBorderWidth">Border width</label>
+                                <div class="number-input-wrapper">
+                                    <input type="number" id="flagBorderWidth" class="config-input" min="1" max="10" value="3">
+                                    <div class="number-input-controls">
+                                        <button type="button" class="num-up" data-target="flagBorderWidth"><i class="fas fa-chevron-up"></i></button>
+                                        <button type="button" class="num-down" data-target="flagBorderWidth"><i class="fas fa-chevron-down"></i></button>
+                                    </div>
                                 </div>
+                                <span class="config-label">pixels</span>
                             </div>
-                            <span class="config-label">auto-saved documents</span>
+                            <p class="config-hint">Border thickness around the editor when a flag is set.</p>
                         </div>
-                        <p class="config-hint">Oldest auto-saves will be removed when limit is reached.</p>
                     </div>
                 </div>
 
-                <div class="settings-divider-line"></div>
+                <!-- NOTIFICATIONS SECTION -->
+                <div class="settings-group">
+                    <div class="settings-group-header">
+                        <i class="fas fa-bell"></i> Notifications
+                    </div>
 
-                <div class="settings-section">
-                    <h4><i class="fas fa-trash-alt"></i> Auto-Delete</h4>
-                    <p class="settings-description">Automatically delete old auto-saved documents.</p>
+                    <div class="settings-section">
+                        <h4><i class="fas fa-comment-dots"></i> Toast Notifications</h4>
+                        <p class="settings-description">Configure popup notification preferences.</p>
 
-                    <div class="auto-save-config">
-                        <div class="config-row">
-                            <label for="autoDeleteDays">Delete auto-saves after</label>
-                            <div class="number-input-wrapper">
-                                <input type="number" id="autoDeleteDays" class="config-input" min="1" max="365" value="7">
-                                <div class="number-input-controls">
-                                    <button type="button" class="num-up" data-target="autoDeleteDays"><i class="fas fa-chevron-up"></i></button>
-                                    <button type="button" class="num-down" data-target="autoDeleteDays"><i class="fas fa-chevron-down"></i></button>
-                                </div>
-                            </div>
-                            <span class="config-label">days</span>
-                        </div>
-                        <p class="config-hint">You'll be warned 24 hours before deletion.</p>
+                        <button class="btn btn-secondary settings-sub-btn" id="toastSettingsBtn">
+                            <i class="fas fa-sliders-h"></i> Toast Settings
+                        </button>
                     </div>
                 </div>
 
-                <div class="settings-divider-line"></div>
-
-                <div class="settings-section">
-                    <h4><i class="fas fa-flag"></i> Document Flags</h4>
-                    <p class="settings-description">Configure the flag border appearance.</p>
-
-                    <div class="auto-save-config">
-                        <div class="config-row">
-                            <label for="flagBorderWidth">Flag border width</label>
-                            <div class="number-input-wrapper">
-                                <input type="number" id="flagBorderWidth" class="config-input" min="1" max="10" value="3">
-                                <div class="number-input-controls">
-                                    <button type="button" class="num-up" data-target="flagBorderWidth"><i class="fas fa-chevron-up"></i></button>
-                                    <button type="button" class="num-down" data-target="flagBorderWidth"><i class="fas fa-chevron-down"></i></button>
-                                </div>
-                            </div>
-                            <span class="config-label">pixels</span>
-                        </div>
-                        <p class="config-hint">Border thickness around the editor when a flag is set.</p>
+                <!-- MODAL BEHAVIOR SECTION -->
+                <div class="settings-group">
+                    <div class="settings-group-header">
+                        <i class="fas fa-window-restore"></i> Modal Behavior
                     </div>
-                </div>
 
-                <div class="settings-divider-line"></div>
+                    <div class="settings-section">
+                        <h4><i class="fas fa-mouse-pointer"></i> Click Outside Action</h4>
+                        <p class="settings-description">What happens when you click outside a modal dialog.</p>
 
-                <div class="settings-section">
-                    <h4><i class="fas fa-bell"></i> Notifications</h4>
-                    <p class="settings-description">Configure toast notification preferences.</p>
-
-                    <button class="btn btn-secondary settings-sub-btn" id="toastSettingsBtn">
-                        <i class="fas fa-sliders-h"></i> Toast Settings
-                    </button>
+                        <div class="auto-save-config">
+                            <div class="config-row">
+                                <label for="modalClickOutside">Action</label>
+                                <select id="modalClickOutside" class="config-select config-select-wide">
+                                    <option value="nothing">Do Nothing</option>
+                                    <option value="cancel">Close &amp; Cancel</option>
+                                    <option value="save">Close &amp; Save</option>
+                                </select>
+                            </div>
+                            <p class="config-hint">Applies to all modals with save/cancel options.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -895,6 +933,55 @@
         <button class="context-menu-item context-menu-danger" id="deleteFolderBtn">
             <i class="fas fa-trash"></i> Delete Folder
         </button>
+    </div>
+
+    <!-- Document Context Menu -->
+    <div class="bubble-context-menu" id="docContextMenu">
+        <button class="context-menu-item has-submenu" id="moveToFolderBtn">
+            <i class="fas fa-folder-open"></i> Move To...
+            <i class="fas fa-chevron-right context-submenu-arrow"></i>
+        </button>
+        <button class="context-menu-item" id="copyDocBtn">
+            <i class="fas fa-copy"></i> Copy
+        </button>
+        <div class="context-menu-divider"></div>
+        <button class="context-menu-item context-menu-danger" id="deleteDocContextBtn">
+            <i class="fas fa-trash"></i> Delete
+        </button>
+    </div>
+
+    <!-- Move To Folder Submenu -->
+    <div class="bubble-context-menu submenu" id="moveToSubmenu">
+        <button class="context-menu-item" id="moveToRootBtn">
+            <i class="fas fa-home"></i> Root (No Folder)
+        </button>
+        <div class="context-menu-divider" id="moveToSubmenuDivider"></div>
+        <div id="moveToFolderList">
+            <!-- Populated by JavaScript -->
+        </div>
+        <div class="no-folders-msg" id="noFoldersMsg" style="display: none;">
+            No folders created yet
+        </div>
+    </div>
+
+    <!-- Delete Document Confirmation Modal -->
+    <div class="modal" id="deleteDocModal">
+        <div class="modal-content">
+            <div class="modal-header modal-header-warning">
+                <h3><i class="fas fa-exclamation-triangle"></i> Delete Document?</h3>
+                <button class="modal-close" id="deleteDocModalClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete "<strong id="deleteDocTitle"></strong>"?</p>
+                <p class="reset-caution"><i class="fas fa-exclamation-circle"></i> This action cannot be undone!</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="deleteDocCancelBtn">Cancel</button>
+                <button class="btn btn-danger" id="deleteDocConfirmBtn">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- Create Folder Modal -->

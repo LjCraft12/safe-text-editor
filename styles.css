@@ -39,6 +39,60 @@
     --active-item-bg: #1e3a5f;
 }
 
+/* ==================== Custom Scrollbar Styles ==================== */
+
+/* Webkit browsers (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-color);
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 5px;
+    border: 2px solid var(--bg-color);
+    transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-color);
+}
+
+::-webkit-scrollbar-corner {
+    background: var(--bg-color);
+}
+
+/* Firefox */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) var(--bg-color);
+}
+
+/* Modal-specific scrollbar */
+.modal-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+    background: var(--bg-color);
+    border-radius: 4px;
+    margin: 4px 0;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-color);
+}
+
 /* 3-Way Theme Mode Toggle (Light / Theme / Dark) */
 .theme-mode-toggle-wrapper {
     position: relative;
@@ -805,15 +859,18 @@ body {
     border-left: 3px solid #f59e0b;
 }
 
+/* Hide the pseudo-element icon in non-wide mode */
 .folder-list li::before {
-    content: '\f07b' !important;
-    color: #f59e0b !important;
+    display: none !important;
 }
 
+/* Show folder icon in wide/grid mode */
 .sidebar.wide .folder-list li::before {
+    display: block !important;
     content: '\f07b' !important;
     font-family: 'Font Awesome 6 Free' !important;
     font-weight: 900 !important;
+    color: #f59e0b !important;
 }
 
 /* Folder view */
@@ -878,6 +935,12 @@ body {
     background: rgba(239, 68, 68, 0.1) !important;
 }
 
+.context-menu-item.has-submenu {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
 .context-submenu-arrow {
     margin-left: auto;
     font-size: 10px;
@@ -885,12 +948,25 @@ body {
 }
 
 .submenu {
-    min-width: 150px;
+    min-width: 180px;
 }
 
 .submenu .context-menu-item {
     font-size: 13px;
     padding: 8px 14px;
+}
+
+.submenu .context-menu-item.active {
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--primary-color);
+}
+
+.submenu .context-menu-item.active i {
+    color: var(--primary-color);
+}
+
+[data-theme="dark"] .submenu .context-menu-item.active {
+    background: rgba(96, 165, 250, 0.15);
 }
 
 .no-folders-msg {
@@ -1297,9 +1373,22 @@ body {
     padding: 8px 16px;
     display: flex;
     justify-content: space-between;
+    align-items: center;
     font-size: 12px;
     color: var(--text-light);
 }
+
+.flag-status {
+    font-weight: 500;
+    text-transform: capitalize;
+}
+
+.flag-status.flag-red { color: #ef4444; }
+.flag-status.flag-orange { color: #f97316; }
+.flag-status.flag-yellow { color: #eab308; }
+.flag-status.flag-green { color: #22c55e; }
+.flag-status.flag-blue { color: #3b82f6; }
+.flag-status.flag-purple { color: #a855f7; }
 
 /* Modals */
 .modal {
@@ -1324,6 +1413,9 @@ body {
     border-radius: var(--radius);
     width: 100%;
     max-width: 420px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
     box-shadow: var(--shadow-lg);
     animation: modalSlideIn 0.2s ease;
 }
@@ -1345,6 +1437,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-shrink: 0;
 }
 
 .modal-header h3 {
@@ -1368,6 +1461,8 @@ body {
 
 .modal-body {
     padding: 20px;
+    overflow-y: auto;
+    flex: 1;
 }
 
 .modal-footer {
@@ -1376,6 +1471,7 @@ body {
     display: flex;
     justify-content: flex-end;
     gap: 8px;
+    flex-shrink: 0;
 }
 
 /* Form */
@@ -2250,6 +2346,10 @@ body {
     min-width: 140px;
 }
 
+.config-select-wide {
+    min-width: 180px;
+}
+
 .config-select:focus {
     outline: none;
     border-color: var(--primary-color);
@@ -2274,6 +2374,56 @@ body {
     height: 1px;
     background: var(--border-color);
     margin: 20px 0;
+}
+
+/* Settings Groups for Advanced Settings */
+.settings-group {
+    background: var(--bg-color);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.settings-group:last-child {
+    margin-bottom: 0;
+}
+
+.settings-group-header {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--primary-color);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+    border-bottom: 2px solid var(--primary-color);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.settings-group-header i {
+    font-size: 14px;
+}
+
+.settings-group .settings-section {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 12px;
+}
+
+.settings-group .settings-section:last-child {
+    margin-bottom: 0;
+}
+
+.settings-group .settings-section h4 {
+    font-size: 14px;
+    margin-bottom: 6px;
+}
+
+.settings-group .auto-save-config {
+    background: var(--bg-color);
 }
 
 /* ==================== Expiring Docs Warning Modal ==================== */
