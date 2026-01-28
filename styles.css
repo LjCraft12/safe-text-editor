@@ -489,6 +489,282 @@ body {
     color: var(--text-light);
 }
 
+/* Submenu Styles */
+.has-submenu {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.submenu-arrow {
+    font-size: 10px;
+    color: var(--text-light);
+    margin-left: auto;
+    padding-left: 12px;
+}
+
+.dropdown-submenu {
+    position: absolute;
+    left: 100%;
+    top: 0;
+    background: var(--white);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    min-width: 180px;
+    display: none;
+    z-index: 2001;
+}
+
+.has-submenu:hover > .dropdown-submenu {
+    display: block;
+}
+
+.dropdown-submenu .dropdown-item {
+    padding: 8px 14px;
+}
+
+.dropdown-submenu .dropdown-item:first-child {
+    border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.dropdown-submenu .dropdown-item:last-child {
+    border-radius: 0 0 var(--radius) var(--radius);
+}
+
+/* Add Custom Flag Button */
+.add-custom-flag-btn {
+    color: var(--primary-color) !important;
+    font-weight: 500;
+}
+
+.add-custom-flag-btn:hover {
+    background: rgba(59, 130, 246, 0.1) !important;
+}
+
+.add-custom-flag-btn i {
+    color: var(--primary-color);
+}
+
+/* Custom Flags Container */
+#customFlagsContainer:not(:empty) {
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 0;
+}
+
+/* Flag Tooltip */
+.flag-tooltip {
+    position: fixed;
+    background: var(--text-color);
+    color: var(--white);
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    max-width: 250px;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.flag-tooltip.show {
+    opacity: 1;
+}
+
+.flag-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 20px;
+    border: 6px solid transparent;
+    border-top-color: var(--text-color);
+}
+
+/* Flag Creator Modal */
+.color-preset-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.color-preset {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.color-preset:hover {
+    transform: scale(1.1);
+}
+
+.color-preset.selected {
+    border-color: var(--text-color);
+    box-shadow: 0 0 0 2px var(--white), 0 0 0 4px var(--primary-color);
+}
+
+.custom-color-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.custom-color-row span {
+    font-size: 13px;
+    color: var(--text-light);
+}
+
+.custom-color-row input[type="color"] {
+    width: 40px;
+    height: 30px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 2px;
+}
+
+.char-counter {
+    text-align: right;
+    font-size: 12px;
+    color: var(--text-light);
+    margin-top: 4px;
+}
+
+.char-counter.warning {
+    color: #f97316;
+}
+
+.char-counter.danger {
+    color: #ef4444;
+}
+
+.flag-preview {
+    background: var(--bg-color);
+    padding: 12px;
+    border-radius: var(--radius);
+    margin-top: 8px;
+}
+
+.flag-preview label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-light);
+    margin-bottom: 8px;
+}
+
+.flag-preview-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    background: var(--white);
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+}
+
+.flag-preview-item .flag-color {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+#flagPreviewName {
+    font-size: 14px;
+    color: var(--text-color);
+}
+
+/* Reset Modal - Tier 1 Simplified */
+.reset-simple-desc {
+    color: var(--text-light);
+    font-size: 14px;
+    margin: 12px 0;
+}
+
+.btn-link {
+    background: none;
+    border: none;
+    color: var(--primary-color);
+    cursor: pointer;
+    font-size: 13px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.btn-link:hover {
+    text-decoration: underline;
+}
+
+.learn-more-link {
+    margin-top: 16px;
+}
+
+/* Reset Modal - Tier 2 Detailed */
+.reset-details-body {
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.reset-details-intro {
+    color: var(--text-light);
+    margin-bottom: 16px;
+}
+
+.reset-category {
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.reset-category:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.reset-category h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.reset-category h4 i {
+    color: var(--primary-color);
+    width: 16px;
+}
+
+.reset-category ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.reset-category li {
+    font-size: 13px;
+    color: var(--text-light);
+    padding: 4px 0 4px 24px;
+    position: relative;
+}
+
+.reset-category li::before {
+    content: '•';
+    position: absolute;
+    left: 8px;
+    color: var(--border-color);
+}
+
 /* Main Content */
 .main-content {
     display: flex;
@@ -1524,9 +1800,45 @@ body.editor-closed-state .hamburger-btn.floating {
     color: var(--text-light);
 }
 
+.status-bar-left,
+.status-bar-right {
+    flex: 1;
+    display: flex;
+    align-items: center;
+}
+
+.status-bar-left {
+    justify-content: flex-start;
+}
+
+.status-bar-right {
+    justify-content: flex-end;
+}
+
+.status-bar-center {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+}
+
+.status-item {
+    transition: opacity 0.2s ease;
+}
+
+.status-item.hidden {
+    display: none !important;
+}
+
 .flag-status {
     font-weight: 500;
     text-transform: capitalize;
+}
+
+/* Hide flag status when empty, but only if not explicitly hidden */
+.flag-status:empty:not(.hidden) {
+    display: none;
 }
 
 .flag-status.flag-red { color: #ef4444; }
@@ -1535,6 +1847,67 @@ body.editor-closed-state .hamburger-btn.floating {
 .flag-status.flag-green { color: #22c55e; }
 .flag-status.flag-blue { color: #3b82f6; }
 .flag-status.flag-purple { color: #a855f7; }
+
+#readingTime {
+    color: var(--text-light);
+}
+
+/* Customize Editor Modal */
+.customize-editor-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.customize-option-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.customize-option-item:last-child {
+    border-bottom: none;
+}
+
+.customize-option-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.customize-option-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.customize-option-desc {
+    font-size: 12px;
+    color: var(--text-light);
+}
+
+/* Unsaved Changes Modal */
+.unsaved-warning-text {
+    font-size: 15px;
+    color: var(--text-color);
+    line-height: 1.5;
+}
+
+.unsaved-footer {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.unsaved-footer .btn {
+    flex: none;
+}
+
+#customizeEditorResetBtn {
+    margin-right: auto;
+}
 
 /* Modals */
 .modal {
@@ -3604,6 +3977,39 @@ body.editor-closed-state .hamburger-btn.floating {
     overflow: hidden;
 }
 
+/* Settings Toggle Row (used in Advanced Settings) */
+.settings-toggle-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.settings-toggle-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.settings-toggle-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.settings-toggle-desc {
+    font-size: 12px;
+    color: var(--text-light);
+}
+
+/* Disabled state for dependent settings */
+.auto-save-config.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
 .toast-option-item {
     display: flex;
     justify-content: space-between;
@@ -3722,6 +4128,40 @@ body.editor-closed-state .hamburger-btn.floating {
 
 .editor-wrapper.flag-purple {
     border-color: #a855f7;
+}
+
+/* Custom flag - border color set via JS */
+.editor-wrapper.flag-custom {
+    border-style: solid;
+}
+
+/* Custom flag item in menu */
+.custom-flag {
+    position: relative;
+}
+
+.delete-custom-flag {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-light);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 3px;
+    opacity: 0;
+    transition: all 0.2s ease;
+}
+
+.custom-flag:hover .delete-custom-flag {
+    opacity: 1;
+}
+
+.delete-custom-flag:hover {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
 }
 
 /* ==================== Document List Flag Indicators ==================== */

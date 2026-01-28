@@ -35,7 +35,7 @@
 ### Rich Text Features
 - Find and replace (with regex support)
 - ~~Word count goals/targets~~ ✅ (Word count in status bar)
-- Reading time estimate
+- ~~Reading time estimate~~ ✅ (Estimated reading time in status bar)
 - Footnotes and endnotes
 - Table of contents generator
 - Markdown import/export
@@ -276,17 +276,31 @@
 - **Auto-Save Storage Limit** - Configure how many auto-saves to keep
 - **Auto-Delete Configuration** - Set days before auto-deleting old auto-saves
 - **Flag Border Width** - Customize flag indicator appearance
+- **Flag Border Toggle** - Enable/disable flag border around editor (status bar flag still shows)
 - **Toast Notification Settings** - Enable/disable specific notification types
 - **Modal Click Outside Behavior** - Configure what happens when clicking outside modals
+- **Modal Save Behavior** - "Save and Close" vs "Save Only" modes
 - **Default Load Action** - Choose what happens when app starts (new doc, last saved, last autosave, etc.)
+- **Customize Editor Modal** - Toggle visibility of status bar elements (word count, character count, flag, reading time)
+- **Tiered Reset System** - Simple confirmation + detailed "Learn More" view of all data to be deleted
+
+### Flags & Organization
+- **Built-in Flags** - 7 preset flags (None, Red-Urgent, Orange-Important, Yellow-Review, Green-Complete, Blue-In Progress, Purple-Ideas)
+- **Custom Flag Creator** - Create custom flags with name, color, and description
+- **Flag Tooltips** - Hover over flags to see descriptions (100 char max)
+- **Flag Color Presets** - 10 color presets + custom color picker
+- **Flag Persistence** - Custom flags saved to localStorage
 
 ### UI/UX Features
 - **Toast Notifications** - Configurable popup notifications for actions
-- **Status Bar** - Word count, character count, flag status
+- **Status Bar** - Word count, character count, flag status, estimated reading time
+- **Customizable Status Bar** - Toggle individual status bar elements on/off
+- **Estimated Reading Time** - Dynamic reading time calculation in status bar
 - **Keyboard Shortcuts** - Ctrl+S (Save), Ctrl+Z (Undo), Ctrl+Y (Redo), Ctrl+B/I/U (formatting)
-- **Reset All Data** - Clear everything with confirmation modal
+- **Reset All Data** - Clear everything with tiered confirmation modal
 - **Close Editor** - Hide editor and show "no document" state
 - **Theme Tooltips** - Hover for theme info, colors, and animation details
+- **Unsaved Changes Warning** - Modal prompts when closing with unsaved changes (including custom flag creator)
 
 ---
 

@@ -62,6 +62,8 @@ class WYSIWYGEditor {
         // Flag state
         this.currentFlag = 'none';
         this.flagBorderWidth = this.loadFlagBorderWidth();
+        this.flagBorderEnabled = this.loadFlagBorderEnabled();
+        this.customFlags = this.loadCustomFlags();
 
         // Auto-save session tracking
         this.currentAutoSaveId = null;
@@ -70,6 +72,7 @@ class WYSIWYGEditor {
         // Modal state management
         this.previousModal = null;
         this.modalClickOutside = this.loadModalClickOutside();
+        this.modalSaveBehavior = this.loadModalSaveBehavior();
 
         // Default load action and editor state
         this.defaultLoadAction = this.loadDefaultLoadAction();
@@ -78,6 +81,16 @@ class WYSIWYGEditor {
         // Animated theme customization
         this.animatedThemeSettings = this.loadAnimatedThemeSettings();
         this.currentCustomizingTheme = null;
+
+        // Editor customization (status bar visibility)
+        this.editorCustomization = this.loadEditorCustomization();
+
+        // Unsaved changes tracking
+        this.pendingUnsavedModal = null;
+        this.pendingUnsavedCallback = null;
+
+        // Flag creator modal tracking
+        this.flagCreatorOriginalState = null;
 
         this.init();
     }
@@ -94,12 +107,58 @@ class WYSIWYGEditor {
         localStorage.setItem('wysiwyg_modal_click_outside', this.modalClickOutside);
     }
 
+    loadModalSaveBehavior() {
+        return localStorage.getItem('wysiwyg_modal_save_behavior') || 'saveAndClose';
+    }
+
+    saveModalSaveBehavior() {
+        localStorage.setItem('wysiwyg_modal_save_behavior', this.modalSaveBehavior);
+    }
+
     loadDefaultLoadAction() {
         return localStorage.getItem('wysiwyg_default_load_action') || 'newDocument';
     }
 
     saveDefaultLoadAction() {
         localStorage.setItem('wysiwyg_default_load_action', this.defaultLoadAction);
+    }
+
+    loadEditorCustomization() {
+        const saved = localStorage.getItem('wysiwyg_editor_customization');
+        if (saved) {
+            return JSON.parse(saved);
+        }
+        // Default: all ON
+        return {
+            showWordCount: true,
+            showCharCount: true,
+            showFlagStatus: true,
+            showReadingTime: true
+        };
+    }
+
+    saveEditorCustomization() {
+        localStorage.setItem('wysiwyg_editor_customization', JSON.stringify(this.editorCustomization));
+    }
+
+    applyEditorCustomization() {
+        const wordCountEl = document.getElementById('wordCount');
+        const charCountEl = document.getElementById('charCount');
+        const flagStatusEl = document.getElementById('flagStatus');
+        const readingTimeEl = document.getElementById('readingTime');
+
+        if (wordCountEl) {
+            wordCountEl.classList.toggle('hidden', !this.editorCustomization.showWordCount);
+        }
+        if (charCountEl) {
+            charCountEl.classList.toggle('hidden', !this.editorCustomization.showCharCount);
+        }
+        if (flagStatusEl) {
+            flagStatusEl.classList.toggle('hidden', !this.editorCustomization.showFlagStatus);
+        }
+        if (readingTimeEl) {
+            readingTimeEl.classList.toggle('hidden', !this.editorCustomization.showReadingTime);
+        }
     }
 
     // Handle modal click-outside based on user preference
@@ -128,8 +187,13 @@ class WYSIWYGEditor {
             this.initFolders();
             this.initAccordion();
             this.initEditMenu();
+            this.initViewMenuFlags();
+            this.initCustomFlagCreator();
+            this.initFlagTooltips();
             this.initFileMenu();
             this.initDocumentContextMenu();
+            this.initCustomizeEditorModal();
+            this.initUnsavedChangesModal();
             this.bindToolbarButtons();
             this.bindSelects();
             this.bindColorPickers();
@@ -140,9 +204,12 @@ class WYSIWYGEditor {
             this.renderDocumentList();
             this.renderAutoSaveDocumentList();
             this.renderFolderList();
+            this.renderCustomFlags();
             this.updateCounts();
             this.updateFlagStatusBar();
+            this.updateReadingTime();
             this.applyAnimatedThemeCustomizations();
+            this.applyEditorCustomization();
         } catch (error) {
             console.error('Error during initialization:', error);
         }
@@ -2912,11 +2979,20 @@ class WYSIWYGEditor {
     }
 
     initResetModal() {
+        // Tier 1 - Simple Reset Modal
         const resetModal = document.getElementById('resetModal');
         const resetModalClose = document.getElementById('resetModalClose');
         const resetCancelBtn = document.getElementById('resetCancelBtn');
         const resetConfirmBtn = document.getElementById('resetConfirmBtn');
+        const learnMoreBtn = document.getElementById('resetLearnMoreBtn');
 
+        // Tier 2 - Detailed Reset Modal
+        const resetDetailsModal = document.getElementById('resetDetailsModal');
+        const resetDetailsClose = document.getElementById('resetDetailsClose');
+        const resetDetailsBackBtn = document.getElementById('resetDetailsBackBtn');
+        const resetDetailsConfirmBtn = document.getElementById('resetDetailsConfirmBtn');
+
+        // Tier 1 handlers
         if (resetModalClose) {
             resetModalClose.addEventListener('click', () => this.closeResetModal());
         }
@@ -2926,19 +3002,50 @@ class WYSIWYGEditor {
         if (resetConfirmBtn) {
             resetConfirmBtn.addEventListener('click', () => this.resetAllData());
         }
+        if (learnMoreBtn) {
+            learnMoreBtn.addEventListener('click', () => this.openResetDetailsModal());
+        }
 
-        // Close on backdrop click - Reset modal only allows cancel (no save option for safety)
+        // Tier 2 handlers
+        if (resetDetailsClose) {
+            resetDetailsClose.addEventListener('click', () => this.closeResetDetailsModal());
+        }
+        if (resetDetailsBackBtn) {
+            resetDetailsBackBtn.addEventListener('click', () => this.closeResetDetailsModal());
+        }
+        if (resetDetailsConfirmBtn) {
+            resetDetailsConfirmBtn.addEventListener('click', () => this.resetAllData());
+        }
+
+        // Close on backdrop click for both modals
         if (resetModal) {
             resetModal.addEventListener('click', (e) => {
                 if (e.target === resetModal) {
                     this.handleModalClickOutside(
                         'resetModal',
-                        null, // No save action for reset modal
+                        null,
                         () => this.closeResetModal()
                     );
                 }
             });
         }
+        if (resetDetailsModal) {
+            resetDetailsModal.addEventListener('click', (e) => {
+                if (e.target === resetDetailsModal) {
+                    this.closeResetDetailsModal();
+                }
+            });
+        }
+    }
+
+    openResetDetailsModal() {
+        // Show Tier 2 modal on top of Tier 1 (don't close Tier 1)
+        document.getElementById('resetDetailsModal').classList.add('show');
+    }
+
+    closeResetDetailsModal() {
+        document.getElementById('resetDetailsModal').classList.remove('show');
+        // Tier 1 modal stays open
     }
 
     resetAllData() {
@@ -2956,9 +3063,14 @@ class WYSIWYGEditor {
             'wysiwyg_toast_settings',
             'wysiwyg_folders',
             'wysiwyg_accordion_state',
+            'wysiwyg_flag_border_enabled',
             'wysiwyg_flag_border_width',
             'wysiwyg_modal_click_outside',
+            'wysiwyg_modal_save_behavior',
             'wysiwyg_default_load_action',
+            'wysiwyg_custom_flags',
+            'wysiwyg_editor_customization',
+            'wysiwyg_animated_theme_settings',
             'wysiwyg_theme' // Legacy key
         ];
 
@@ -3062,6 +3174,15 @@ class WYSIWYGEditor {
             unitSelect.addEventListener('change', () => this.updateAutoSaveHint());
         }
 
+        // Flag border enabled toggle - update border width config visibility
+        const flagBorderEnabledToggle = document.getElementById('flagBorderEnabled');
+        const flagBorderWidthConfig = document.getElementById('flagBorderWidthConfig');
+        if (flagBorderEnabledToggle && flagBorderWidthConfig) {
+            flagBorderEnabledToggle.addEventListener('change', () => {
+                flagBorderWidthConfig.classList.toggle('disabled', !flagBorderEnabledToggle.checked);
+            });
+        }
+
         // Custom number input controls
         this.initNumberInputControls();
     }
@@ -3102,8 +3223,11 @@ class WYSIWYGEditor {
         const unitSelect = document.getElementById('autoSaveUnit');
         const limitInput = document.getElementById('autoSaveLimit');
         const deleteInput = document.getElementById('autoDeleteDays');
+        const flagBorderEnabledToggle = document.getElementById('flagBorderEnabled');
         const flagBorderInput = document.getElementById('flagBorderWidth');
+        const flagBorderWidthConfig = document.getElementById('flagBorderWidthConfig');
         const modalClickOutsideSelect = document.getElementById('modalClickOutside');
+        const modalSaveBehaviorSelect = document.getElementById('modalSaveBehavior');
         const defaultLoadActionSelect = document.getElementById('defaultLoadAction');
 
         // Populate current values
@@ -3111,9 +3235,16 @@ class WYSIWYGEditor {
         if (unitSelect) unitSelect.value = this.autoSaveUnit;
         if (limitInput) limitInput.value = this.autoSaveLimit;
         if (deleteInput) deleteInput.value = this.autoDeleteDays;
+        if (flagBorderEnabledToggle) flagBorderEnabledToggle.checked = this.flagBorderEnabled;
         if (flagBorderInput) flagBorderInput.value = this.flagBorderWidth;
         if (modalClickOutsideSelect) modalClickOutsideSelect.value = this.modalClickOutside;
+        if (modalSaveBehaviorSelect) modalSaveBehaviorSelect.value = this.modalSaveBehavior;
         if (defaultLoadActionSelect) defaultLoadActionSelect.value = this.defaultLoadAction;
+
+        // Update border width config visibility based on enabled state
+        if (flagBorderWidthConfig) {
+            flagBorderWidthConfig.classList.toggle('disabled', !this.flagBorderEnabled);
+        }
 
         this.updateAutoSaveHint();
         modal.classList.add('show');
@@ -3128,16 +3259,20 @@ class WYSIWYGEditor {
         const unitSelect = document.getElementById('autoSaveUnit');
         const limitInput = document.getElementById('autoSaveLimit');
         const deleteInput = document.getElementById('autoDeleteDays');
+        const flagBorderEnabledToggle = document.getElementById('flagBorderEnabled');
         const flagBorderInput = document.getElementById('flagBorderWidth');
         const modalClickOutsideSelect = document.getElementById('modalClickOutside');
+        const modalSaveBehaviorSelect = document.getElementById('modalSaveBehavior');
         const defaultLoadActionSelect = document.getElementById('defaultLoadAction');
 
         const newValue = parseInt(valueInput.value) || 5;
         const newUnit = unitSelect.value;
         const newLimit = parseInt(limitInput.value) || 3;
         const newDeleteDays = parseInt(deleteInput.value) || 7;
+        const newFlagBorderEnabled = flagBorderEnabledToggle.checked;
         const newFlagBorderWidth = parseInt(flagBorderInput.value) || 3;
         const newModalClickOutside = modalClickOutsideSelect.value;
+        const newModalSaveBehavior = modalSaveBehaviorSelect.value;
         const newDefaultLoadAction = defaultLoadActionSelect.value;
 
         // Validate
@@ -3162,15 +3297,19 @@ class WYSIWYGEditor {
         this.autoSaveUnit = newUnit;
         this.autoSaveLimit = newLimit;
         this.autoDeleteDays = newDeleteDays;
+        this.flagBorderEnabled = newFlagBorderEnabled;
         this.flagBorderWidth = newFlagBorderWidth;
         this.modalClickOutside = newModalClickOutside;
+        this.modalSaveBehavior = newModalSaveBehavior;
         this.defaultLoadAction = newDefaultLoadAction;
         this.saveAutoSaveSettings();
+        this.saveFlagBorderEnabled();
         this.saveFlagBorderWidth();
         this.saveModalClickOutside();
+        this.saveModalSaveBehavior();
         this.saveDefaultLoadAction();
 
-        // Apply flag border width immediately
+        // Apply flag border immediately
         this.applyFlagToEditor();
 
         // Apply new limit - remove excess auto-saves
@@ -3363,6 +3502,200 @@ class WYSIWYGEditor {
         if (this.toastSettings.enabled && this.toastSettings.settings) {
             this.showNotification('Toast settings saved!', 'settings');
         }
+    }
+
+    // ==================== Customize Editor Modal ====================
+
+    initCustomizeEditorModal() {
+        const modal = document.getElementById('customizeEditorModal');
+        const closeBtn = document.getElementById('customizeEditorClose');
+        const cancelBtn = document.getElementById('customizeEditorCancelBtn');
+        const saveBtn = document.getElementById('customizeEditorSaveBtn');
+        const resetBtn = document.getElementById('customizeEditorResetBtn');
+        const customizeBtn = document.getElementById('customizeEditorBtn');
+
+        // Store original state for change detection
+        this.customizeEditorOriginalState = null;
+
+        // Open modal from View menu
+        if (customizeBtn) {
+            customizeBtn.addEventListener('click', () => {
+                this.openCustomizeEditorModal();
+                document.getElementById('viewMenu').classList.remove('show');
+            });
+        }
+
+        // Close button (X)
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this.handleCustomizeEditorClose());
+        }
+
+        // Cancel button
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => this.handleCustomizeEditorClose());
+        }
+
+        // Save button
+        if (saveBtn) {
+            saveBtn.addEventListener('click', () => this.saveCustomizeEditor());
+        }
+
+        // Reset to defaults button
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => this.resetCustomizeEditorDefaults());
+        }
+
+        // Close on backdrop click
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    this.handleModalClickOutside(
+                        'customizeEditorModal',
+                        () => this.saveCustomizeEditor(),
+                        () => this.handleCustomizeEditorClose()
+                    );
+                }
+            });
+        }
+    }
+
+    openCustomizeEditorModal() {
+        // Store original state for change detection
+        this.customizeEditorOriginalState = JSON.stringify(this.editorCustomization);
+
+        // Populate current values
+        document.getElementById('showWordCount').checked = this.editorCustomization.showWordCount;
+        document.getElementById('showCharCount').checked = this.editorCustomization.showCharCount;
+        document.getElementById('showFlagStatus').checked = this.editorCustomization.showFlagStatus;
+        document.getElementById('showReadingTime').checked = this.editorCustomization.showReadingTime;
+
+        // Show modal
+        document.getElementById('customizeEditorModal').classList.add('show');
+    }
+
+    hasCustomizeEditorChanges() {
+        const currentState = JSON.stringify({
+            showWordCount: document.getElementById('showWordCount').checked,
+            showCharCount: document.getElementById('showCharCount').checked,
+            showFlagStatus: document.getElementById('showFlagStatus').checked,
+            showReadingTime: document.getElementById('showReadingTime').checked
+        });
+        return currentState !== this.customizeEditorOriginalState;
+    }
+
+    handleCustomizeEditorClose() {
+        if (this.hasCustomizeEditorChanges()) {
+            this.showUnsavedChangesWarning(
+                'customizeEditorModal',
+                () => this.saveCustomizeEditor(),
+                () => this.closeCustomizeEditorModal()
+            );
+        } else {
+            this.closeCustomizeEditorModal();
+        }
+    }
+
+    closeCustomizeEditorModal() {
+        document.getElementById('customizeEditorModal').classList.remove('show');
+        this.customizeEditorOriginalState = null;
+    }
+
+    saveCustomizeEditor() {
+        // Get values from UI
+        this.editorCustomization = {
+            showWordCount: document.getElementById('showWordCount').checked,
+            showCharCount: document.getElementById('showCharCount').checked,
+            showFlagStatus: document.getElementById('showFlagStatus').checked,
+            showReadingTime: document.getElementById('showReadingTime').checked
+        };
+
+        // Save to localStorage
+        this.saveEditorCustomization();
+
+        // Apply changes
+        this.applyEditorCustomization();
+
+        // Update original state (so subsequent saves don't trigger unsaved warning)
+        this.customizeEditorOriginalState = JSON.stringify(this.editorCustomization);
+
+        // Handle modal closing based on save behavior
+        if (this.modalSaveBehavior === 'saveAndClose') {
+            this.closeCustomizeEditorModal();
+        }
+
+        this.showNotification('Editor settings saved!', 'settings');
+    }
+
+    resetCustomizeEditorDefaults() {
+        // Reset all toggles to ON
+        document.getElementById('showWordCount').checked = true;
+        document.getElementById('showCharCount').checked = true;
+        document.getElementById('showFlagStatus').checked = true;
+        document.getElementById('showReadingTime').checked = true;
+
+        this.showNotification('Reset to defaults', 'settings');
+    }
+
+    // ==================== Unsaved Changes Modal ====================
+
+    initUnsavedChangesModal() {
+        const modal = document.getElementById('unsavedChangesModal');
+        const closeBtn = document.getElementById('unsavedChangesClose');
+        const cancelBtn = document.getElementById('unsavedCancelBtn');
+        const discardBtn = document.getElementById('unsavedDiscardBtn');
+        const saveBtn = document.getElementById('unsavedSaveBtn');
+
+        // Close button (X) - same as Cancel
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this.closeUnsavedChangesModal());
+        }
+
+        // Cancel button - return to original modal
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => this.closeUnsavedChangesModal());
+        }
+
+        // Discard Changes button
+        if (discardBtn) {
+            discardBtn.addEventListener('click', () => {
+                this.closeUnsavedChangesModal();
+                // Close the original modal without saving
+                if (this.pendingUnsavedCallback && this.pendingUnsavedCallback.discard) {
+                    this.pendingUnsavedCallback.discard();
+                }
+                this.pendingUnsavedModal = null;
+                this.pendingUnsavedCallback = null;
+            });
+        }
+
+        // Save & Close button
+        if (saveBtn) {
+            saveBtn.addEventListener('click', () => {
+                // Save changes
+                if (this.pendingUnsavedCallback && this.pendingUnsavedCallback.save) {
+                    this.pendingUnsavedCallback.save();
+                }
+                this.closeUnsavedChangesModal();
+                // Close original modal (save callback may already close it)
+                this.pendingUnsavedModal = null;
+                this.pendingUnsavedCallback = null;
+            });
+        }
+    }
+
+    showUnsavedChangesWarning(modalId, saveCallback, discardCallback) {
+        this.pendingUnsavedModal = modalId;
+        this.pendingUnsavedCallback = {
+            save: saveCallback,
+            discard: discardCallback
+        };
+
+        // Show warning modal
+        document.getElementById('unsavedChangesModal').classList.add('show');
+    }
+
+    closeUnsavedChangesModal() {
+        document.getElementById('unsavedChangesModal').classList.remove('show');
     }
 
     // ==================== Folders ====================
@@ -4080,7 +4413,7 @@ class WYSIWYGEditor {
         });
     }
 
-    // ==================== Edit Menu & Flags ====================
+    // ==================== Edit Menu ====================
 
     initEditMenu() {
         const editMenuBtn = document.getElementById('editMenuBtn');
@@ -4105,21 +4438,349 @@ class WYSIWYGEditor {
             editMenu.classList.remove('show');
         });
 
-        // Flag buttons
-        document.querySelectorAll('.flag-item').forEach(item => {
-            item.addEventListener('click', () => {
-                const flag = item.dataset.flag;
-                this.setDocumentFlag(flag);
-                editMenu.classList.remove('show');
-            });
-        });
-
         // Close menu when clicking outside
         document.addEventListener('click', (e) => {
             if (!editMenuBtn.contains(e.target) && !editMenu.contains(e.target)) {
                 editMenu.classList.remove('show');
             }
         });
+    }
+
+    // ==================== View Menu Flags ====================
+
+    initViewMenuFlags() {
+        const viewMenu = document.getElementById('viewMenu');
+
+        // Flag buttons in View menu submenu (built-in flags)
+        this.bindFlagItemEvents();
+
+        // Add Custom Flag button
+        const addCustomFlagBtn = document.getElementById('addCustomFlagBtn');
+        if (addCustomFlagBtn) {
+            addCustomFlagBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                viewMenu.classList.remove('show');
+                this.openFlagCreatorModal();
+            });
+        }
+    }
+
+    bindFlagItemEvents() {
+        const viewMenu = document.getElementById('viewMenu');
+
+        document.querySelectorAll('.flag-item').forEach(item => {
+            // Remove existing listeners by cloning
+            const newItem = item.cloneNode(true);
+            item.parentNode.replaceChild(newItem, item);
+
+            newItem.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const flag = newItem.dataset.flag;
+                this.setDocumentFlag(flag);
+                viewMenu.classList.remove('show');
+            });
+        });
+    }
+
+    // ==================== Flag Tooltips ====================
+
+    initFlagTooltips() {
+        const tooltip = document.getElementById('flagTooltip');
+        if (!tooltip) return;
+
+        // Use event delegation for flag items
+        document.addEventListener('mouseover', (e) => {
+            const flagItem = e.target.closest('.flag-item');
+            if (flagItem && flagItem.dataset.description) {
+                this.showFlagTooltip(flagItem, flagItem.dataset.description);
+            }
+        });
+
+        document.addEventListener('mouseout', (e) => {
+            const flagItem = e.target.closest('.flag-item');
+            if (flagItem) {
+                this.hideFlagTooltip();
+            }
+        });
+    }
+
+    showFlagTooltip(element, description) {
+        const tooltip = document.getElementById('flagTooltip');
+        const tooltipText = document.getElementById('flagTooltipText');
+        if (!tooltip || !tooltipText) return;
+
+        // Cap at 100 characters
+        tooltipText.textContent = description.substring(0, 100);
+
+        // Position tooltip
+        const rect = element.getBoundingClientRect();
+        tooltip.style.left = `${rect.left}px`;
+        tooltip.style.top = `${rect.top - tooltip.offsetHeight - 8}px`;
+
+        tooltip.classList.add('show');
+    }
+
+    hideFlagTooltip() {
+        const tooltip = document.getElementById('flagTooltip');
+        if (tooltip) {
+            tooltip.classList.remove('show');
+        }
+    }
+
+    // ==================== Custom Flag Creator ====================
+
+    loadCustomFlags() {
+        const saved = localStorage.getItem('wysiwyg_custom_flags');
+        return saved ? JSON.parse(saved) : [];
+    }
+
+    saveCustomFlags() {
+        localStorage.setItem('wysiwyg_custom_flags', JSON.stringify(this.customFlags));
+    }
+
+    initCustomFlagCreator() {
+        const modal = document.getElementById('flagCreatorModal');
+        const closeBtn = document.getElementById('flagCreatorClose');
+        const cancelBtn = document.getElementById('flagCreatorCancelBtn');
+        const saveBtn = document.getElementById('flagCreatorSaveBtn');
+        const nameInput = document.getElementById('customFlagName');
+        const descInput = document.getElementById('customFlagDescription');
+        const colorPicker = document.getElementById('customFlagColorPicker');
+        const charCounter = document.getElementById('flagDescCharCount');
+
+        // Close button (X)
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this.handleFlagCreatorClose());
+        }
+
+        // Cancel button
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => this.handleFlagCreatorClose());
+        }
+
+        // Save button
+        if (saveBtn) {
+            saveBtn.addEventListener('click', () => this.saveCustomFlag());
+        }
+
+        // Color presets
+        document.querySelectorAll('.color-preset').forEach(preset => {
+            preset.addEventListener('click', () => {
+                document.querySelectorAll('.color-preset').forEach(p => p.classList.remove('selected'));
+                preset.classList.add('selected');
+                this.updateFlagPreview();
+            });
+        });
+
+        // Custom color picker
+        if (colorPicker) {
+            colorPicker.addEventListener('input', () => {
+                document.querySelectorAll('.color-preset').forEach(p => p.classList.remove('selected'));
+                this.updateFlagPreview();
+            });
+        }
+
+        // Name input - update preview
+        if (nameInput) {
+            nameInput.addEventListener('input', () => this.updateFlagPreview());
+        }
+
+        // Description input - character counter
+        if (descInput && charCounter) {
+            descInput.addEventListener('input', () => {
+                const remaining = 100 - descInput.value.length;
+                charCounter.textContent = remaining;
+
+                const counterWrapper = charCounter.parentElement;
+                counterWrapper.classList.remove('warning', 'danger');
+                if (remaining <= 10) {
+                    counterWrapper.classList.add('danger');
+                } else if (remaining <= 30) {
+                    counterWrapper.classList.add('warning');
+                }
+            });
+        }
+
+        // Close on backdrop click
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    this.handleModalClickOutside(
+                        'flagCreatorModal',
+                        () => this.saveCustomFlag(),
+                        () => this.handleFlagCreatorClose()
+                    );
+                }
+            });
+        }
+    }
+
+    openFlagCreatorModal() {
+        // Store original state for change detection
+        this.flagCreatorOriginalState = JSON.stringify({
+            name: '',
+            color: '#ef4444',
+            description: ''
+        });
+
+        // Reset form
+        document.getElementById('customFlagName').value = '';
+        document.getElementById('customFlagDescription').value = '';
+        document.getElementById('customFlagColorPicker').value = '#3b82f6';
+        document.getElementById('flagDescCharCount').textContent = '100';
+
+        // Reset color presets
+        document.querySelectorAll('.color-preset').forEach((p, i) => {
+            p.classList.toggle('selected', i === 0);
+        });
+
+        // Reset char counter styling
+        document.getElementById('flagDescCharCount').parentElement.classList.remove('warning', 'danger');
+
+        // Update preview
+        this.updateFlagPreview();
+
+        // Show modal
+        document.getElementById('flagCreatorModal').classList.add('show');
+    }
+
+    updateFlagPreview() {
+        const nameInput = document.getElementById('customFlagName');
+        const colorPicker = document.getElementById('customFlagColorPicker');
+        const previewColor = document.getElementById('flagPreviewColor');
+        const previewName = document.getElementById('flagPreviewName');
+
+        // Get color
+        const selectedPreset = document.querySelector('.color-preset.selected');
+        const color = selectedPreset ? selectedPreset.dataset.color : colorPicker.value;
+
+        // Update preview
+        previewColor.style.background = color;
+        previewName.textContent = nameInput.value || 'Custom Flag';
+    }
+
+    getSelectedFlagColor() {
+        const selectedPreset = document.querySelector('.color-preset.selected');
+        if (selectedPreset) {
+            return selectedPreset.dataset.color;
+        }
+        return document.getElementById('customFlagColorPicker').value;
+    }
+
+    hasFlagCreatorChanges() {
+        const currentState = JSON.stringify({
+            name: document.getElementById('customFlagName').value,
+            color: this.getSelectedFlagColor(),
+            description: document.getElementById('customFlagDescription').value
+        });
+        return currentState !== this.flagCreatorOriginalState;
+    }
+
+    handleFlagCreatorClose() {
+        if (this.hasFlagCreatorChanges()) {
+            this.showUnsavedChangesWarning(
+                'flagCreatorModal',
+                () => this.saveCustomFlag(),
+                () => this.closeFlagCreatorModal()
+            );
+        } else {
+            this.closeFlagCreatorModal();
+        }
+    }
+
+    closeFlagCreatorModal() {
+        document.getElementById('flagCreatorModal').classList.remove('show');
+        this.flagCreatorOriginalState = null;
+    }
+
+    saveCustomFlag() {
+        const name = document.getElementById('customFlagName').value.trim();
+        const description = document.getElementById('customFlagDescription').value.trim();
+        const color = this.getSelectedFlagColor();
+
+        // Validate
+        if (!name) {
+            this.showNotification('Please enter a flag name', 'settings');
+            return;
+        }
+
+        // Create flag ID from name
+        const flagId = 'custom_' + name.toLowerCase().replace(/\s+/g, '_') + '_' + Date.now();
+
+        // Create custom flag object
+        const customFlag = {
+            id: flagId,
+            name: name,
+            color: color,
+            description: description || `Custom flag: ${name}`
+        };
+
+        // Add to custom flags
+        this.customFlags.push(customFlag);
+        this.saveCustomFlags();
+
+        // Re-render custom flags in menu
+        this.renderCustomFlags();
+
+        // Close modal based on save behavior
+        if (this.modalSaveBehavior === 'saveAndClose') {
+            this.closeFlagCreatorModal();
+        } else {
+            // Update original state so it doesn't trigger unsaved warning
+            this.flagCreatorOriginalState = JSON.stringify({
+                name: name,
+                color: color,
+                description: description
+            });
+        }
+
+        this.showNotification(`Flag "${name}" created!`, 'settings');
+    }
+
+    renderCustomFlags() {
+        const container = document.getElementById('customFlagsContainer');
+        if (!container) return;
+
+        if (this.customFlags.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+
+        container.innerHTML = this.customFlags.map(flag => `
+            <button class="dropdown-item flag-item custom-flag" 
+                    data-flag="${flag.id}" 
+                    data-description="${flag.description.substring(0, 100)}">
+                <span class="flag-color" style="background: ${flag.color};"></span> 
+                ${flag.name}
+                <button class="delete-custom-flag" data-flag-id="${flag.id}" title="Delete flag">
+                    <i class="fas fa-times"></i>
+                </button>
+            </button>
+        `).join('');
+
+        // Bind events for custom flags
+        this.bindFlagItemEvents();
+
+        // Bind delete buttons
+        container.querySelectorAll('.delete-custom-flag').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const flagId = btn.dataset.flagId;
+                this.deleteCustomFlag(flagId);
+            });
+        });
+    }
+
+    deleteCustomFlag(flagId) {
+        const flag = this.customFlags.find(f => f.id === flagId);
+        if (!flag) return;
+
+        if (confirm(`Delete the "${flag.name}" flag?`)) {
+            this.customFlags = this.customFlags.filter(f => f.id !== flagId);
+            this.saveCustomFlags();
+            this.renderCustomFlags();
+            this.showNotification(`Flag "${flag.name}" deleted`, 'settings');
+        }
     }
 
     // ==================== File Menu ====================
@@ -4333,10 +4994,20 @@ class WYSIWYGEditor {
         localStorage.setItem('wysiwyg_flag_border_width', this.flagBorderWidth.toString());
     }
 
+    loadFlagBorderEnabled() {
+        const saved = localStorage.getItem('wysiwyg_flag_border_enabled');
+        return saved !== null ? saved === 'true' : true; // Default enabled
+    }
+
+    saveFlagBorderEnabled() {
+        localStorage.setItem('wysiwyg_flag_border_enabled', this.flagBorderEnabled.toString());
+    }
+
     setDocumentFlag(flag) {
         this.currentFlag = flag;
         this.applyFlagToEditor();
         this.updateFlagMenuState();
+        this.updateFlagStatusBar();
 
         // Save flag with current document if saved
         if (this.currentDocId) {
@@ -4348,7 +5019,13 @@ class WYSIWYGEditor {
             }
         }
 
-        const flagNames = {
+        // Get flag name for notification
+        const flagName = this.getFlagDisplayName(flag);
+        this.showNotification(`Flag set: ${flagName}`, 'settings');
+    }
+
+    getFlagDisplayName(flagId) {
+        const builtInFlags = {
             'none': 'No flag',
             'red': 'Red - Urgent',
             'orange': 'Orange - Important',
@@ -4358,20 +5035,63 @@ class WYSIWYGEditor {
             'purple': 'Purple - Ideas'
         };
 
-        this.showNotification(`Flag set: ${flagNames[flag]}`, 'settings');
+        if (builtInFlags[flagId]) {
+            return builtInFlags[flagId];
+        }
+
+        // Check custom flags
+        const customFlag = this.customFlags.find(f => f.id === flagId);
+        if (customFlag) {
+            return customFlag.name;
+        }
+
+        return flagId;
+    }
+
+    getFlagColor(flagId) {
+        const builtInColors = {
+            'red': '#ef4444',
+            'orange': '#f97316',
+            'yellow': '#eab308',
+            'green': '#22c55e',
+            'blue': '#3b82f6',
+            'purple': '#a855f7'
+        };
+
+        if (builtInColors[flagId]) {
+            return builtInColors[flagId];
+        }
+
+        // Check custom flags
+        const customFlag = this.customFlags.find(f => f.id === flagId);
+        if (customFlag) {
+            return customFlag.color;
+        }
+
+        return '#3b82f6'; // Default blue
     }
 
     applyFlagToEditor() {
         const editorWrapper = document.querySelector('.editor-wrapper');
 
         // Remove all flag classes
-        editorWrapper.classList.remove('flagged', 'flag-red', 'flag-orange', 'flag-yellow', 'flag-green', 'flag-blue', 'flag-purple');
+        editorWrapper.classList.remove('flagged', 'flag-red', 'flag-orange', 'flag-yellow', 'flag-green', 'flag-blue', 'flag-purple', 'flag-custom');
+        editorWrapper.style.borderWidth = '';
+        editorWrapper.style.borderColor = '';
 
-        if (this.currentFlag !== 'none') {
-            editorWrapper.classList.add('flagged', `flag-${this.currentFlag}`);
+        // Only show border if flag border is enabled AND there's a flag set
+        if (this.flagBorderEnabled && this.currentFlag && this.currentFlag !== 'none') {
+            editorWrapper.classList.add('flagged');
+
+            // Check if it's a custom flag
+            if (this.currentFlag.startsWith('custom_')) {
+                editorWrapper.classList.add('flag-custom');
+                const color = this.getFlagColor(this.currentFlag);
+                editorWrapper.style.borderColor = color;
+            } else {
+                editorWrapper.classList.add(`flag-${this.currentFlag}`);
+            }
             editorWrapper.style.borderWidth = `${this.flagBorderWidth}px`;
-        } else {
-            editorWrapper.style.borderWidth = '';
         }
     }
 
@@ -4389,10 +5109,11 @@ class WYSIWYGEditor {
         if (!flagStatus) return;
 
         // Remove all flag classes
-        flagStatus.classList.remove('flag-red', 'flag-orange', 'flag-yellow', 'flag-green', 'flag-blue', 'flag-purple');
+        flagStatus.classList.remove('flag-red', 'flag-orange', 'flag-yellow', 'flag-green', 'flag-blue', 'flag-purple', 'flag-custom');
+        flagStatus.style.color = '';
 
         if (this.currentFlag && this.currentFlag !== 'none') {
-            const flagNames = {
+            const builtInNames = {
                 'red': 'Urgent',
                 'orange': 'Important',
                 'yellow': 'Review',
@@ -4400,8 +5121,20 @@ class WYSIWYGEditor {
                 'blue': 'In Progress',
                 'purple': 'Ideas'
             };
-            flagStatus.textContent = flagNames[this.currentFlag] || '';
-            flagStatus.classList.add(`flag-${this.currentFlag}`);
+
+            if (builtInNames[this.currentFlag]) {
+                flagStatus.textContent = builtInNames[this.currentFlag];
+                flagStatus.classList.add(`flag-${this.currentFlag}`);
+            } else {
+                // Custom flag
+                const customFlag = this.customFlags.find(f => f.id === this.currentFlag);
+                if (customFlag) {
+                    flagStatus.textContent = customFlag.name;
+                    flagStatus.style.color = customFlag.color;
+                } else {
+                    flagStatus.textContent = '';
+                }
+            }
         } else {
             flagStatus.textContent = '';
         }
@@ -5172,6 +5905,31 @@ ${content}
 
         document.getElementById('charCount').textContent = `${chars} characters`;
         document.getElementById('wordCount').textContent = `${words} words`;
+
+        // Update reading time
+        this.updateReadingTime(words);
+    }
+
+    updateReadingTime(wordCount = null) {
+        if (wordCount === null) {
+            const text = this.editor.innerText || '';
+            wordCount = text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
+        }
+
+        // Average reading speed is 200-250 words per minute, using 200 for estimate
+        const wordsPerMinute = 200;
+        const minutes = Math.ceil(wordCount / wordsPerMinute);
+
+        const readingTimeEl = document.getElementById('readingTime');
+        if (readingTimeEl) {
+            if (minutes === 0) {
+                readingTimeEl.textContent = '~0 min read';
+            } else if (minutes === 1) {
+                readingTimeEl.textContent = '~1 min read';
+            } else {
+                readingTimeEl.textContent = `~${minutes} min read`;
+            }
+        }
     }
 
     updateActiveStates() {
