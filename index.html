@@ -22,6 +22,45 @@
                 </button>
             </div>
             <div class="header-right">
+                <!-- Edit Menu -->
+                <div class="dropdown">
+                    <button class="btn btn-secondary dropdown-toggle" id="editMenuBtn">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <div class="dropdown-menu" id="editMenu">
+                        <button class="dropdown-item" id="undoMenuBtn">
+                            <i class="fas fa-undo"></i> Undo
+                            <span class="shortcut">Ctrl+Z</span>
+                        </button>
+                        <button class="dropdown-item" id="redoMenuBtn">
+                            <i class="fas fa-redo"></i> Redo
+                            <span class="shortcut">Ctrl+Y</span>
+                        </button>
+                        <div class="dropdown-divider"></div>
+                        <div class="dropdown-section-header">Document Flag</div>
+                        <button class="dropdown-item flag-item" id="flagNoneBtn" data-flag="none">
+                            <i class="fas fa-times-circle"></i> No Flag
+                        </button>
+                        <button class="dropdown-item flag-item" id="flagRedBtn" data-flag="red">
+                            <span class="flag-color" style="background: #ef4444;"></span> Red - Urgent
+                        </button>
+                        <button class="dropdown-item flag-item" id="flagOrangeBtn" data-flag="orange">
+                            <span class="flag-color" style="background: #f97316;"></span> Orange - Important
+                        </button>
+                        <button class="dropdown-item flag-item" id="flagYellowBtn" data-flag="yellow">
+                            <span class="flag-color" style="background: #eab308;"></span> Yellow - Review
+                        </button>
+                        <button class="dropdown-item flag-item" id="flagGreenBtn" data-flag="green">
+                            <span class="flag-color" style="background: #22c55e;"></span> Green - Complete
+                        </button>
+                        <button class="dropdown-item flag-item" id="flagBlueBtn" data-flag="blue">
+                            <span class="flag-color" style="background: #3b82f6;"></span> Blue - In Progress
+                        </button>
+                        <button class="dropdown-item flag-item" id="flagPurpleBtn" data-flag="purple">
+                            <span class="flag-color" style="background: #a855f7;"></span> Purple - Ideas
+                        </button>
+                    </div>
+                </div>
                 <!-- View Menu -->
                 <div class="dropdown">
                     <button class="btn btn-secondary dropdown-toggle" id="viewBtn">
@@ -96,31 +135,61 @@
                         <span class="hamburger-line"></span>
                         <span class="hamburger-line"></span>
                     </button>
-                    <h3><i class="fas fa-folder"></i> Documents</h3>
+                    <h3 id="sidebarTitle"><i class="fas fa-folder"></i> Documents</h3>
+                    <button class="back-btn" id="folderBackBtn" style="display: none;">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <button class="add-btn" id="addBtn" title="Add New">
+                        <i class="fas fa-plus"></i>
+                    </button>
                 </div>
-                <div class="sidebar-content">
-                    <!-- Saved Documents Section -->
-                    <div class="doc-section">
-                        <div class="doc-section-header">
-                            <span><i class="fas fa-save"></i> Saved</span>
-                            <span class="doc-count" id="savedDocCount">0</span>
+                <div class="sidebar-content" id="sidebarContent">
+                    <!-- Normal View -->
+                    <div id="normalDocView">
+                        <!-- Saved Documents Section -->
+                        <div class="doc-section accordion-section" data-section="saved">
+                            <div class="doc-section-header accordion-header" data-toggle="saved">
+                                <span><i class="fas fa-chevron-down accordion-icon"></i><i class="fas fa-save"></i> Saved</span>
+                                <span class="doc-count" id="savedDocCount">0</span>
+                            </div>
+                            <div class="accordion-content" id="savedAccordion">
+                                <ul class="doc-list" id="docList">
+                                    <li class="no-docs">No documents saved yet</li>
+                                </ul>
+                            </div>
                         </div>
-                        <ul class="doc-list" id="docList">
-                            <li class="no-docs">No documents saved yet</li>
-                        </ul>
+
+                        <!-- Folders Section -->
+                        <div class="doc-section accordion-section" data-section="folders">
+                            <div class="doc-section-header accordion-header" data-toggle="folders">
+                                <span><i class="fas fa-chevron-down accordion-icon"></i><i class="fas fa-folder"></i> Folders</span>
+                                <span class="doc-count" id="folderCount">0</span>
+                            </div>
+                            <div class="accordion-content" id="foldersAccordion">
+                                <ul class="doc-list folder-list" id="folderList">
+                                    <li class="no-docs">No folders created yet</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Auto-Saved Documents Section -->
+                        <div class="doc-section accordion-section" data-section="autosave">
+                            <div class="doc-section-header accordion-header" data-toggle="autosave">
+                                <span><i class="fas fa-chevron-down accordion-icon"></i><i class="fas fa-clock"></i> Auto-Saved</span>
+                                <span class="doc-count" id="autoSaveDocCount">0</span>
+                            </div>
+                            <div class="accordion-content" id="autosaveAccordion">
+                                <ul class="doc-list doc-list-autosave" id="autoSaveDocList">
+                                    <li class="no-docs">No auto-saved documents</li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- Divider -->
-                    <div class="doc-section-divider"></div>
-
-                    <!-- Auto-Saved Documents Section -->
-                    <div class="doc-section">
-                        <div class="doc-section-header">
-                            <span><i class="fas fa-clock"></i> Auto-Saved</span>
-                            <span class="doc-count" id="autoSaveDocCount">0</span>
-                        </div>
-                        <ul class="doc-list doc-list-autosave" id="autoSaveDocList">
-                            <li class="no-docs">No auto-saved documents</li>
+                    <!-- Folder View (shown when inside a folder) -->
+                    <div id="folderDocView" style="display: none;">
+                        <ul class="doc-list folder-contents" id="folderContentsList">
+                            <li class="no-docs">This folder is empty</li>
                         </ul>
                     </div>
                 </div>
@@ -594,6 +663,28 @@
                 <div class="settings-divider-line"></div>
 
                 <div class="settings-section">
+                    <h4><i class="fas fa-flag"></i> Document Flags</h4>
+                    <p class="settings-description">Configure the flag border appearance.</p>
+
+                    <div class="auto-save-config">
+                        <div class="config-row">
+                            <label for="flagBorderWidth">Flag border width</label>
+                            <div class="number-input-wrapper">
+                                <input type="number" id="flagBorderWidth" class="config-input" min="1" max="10" value="3">
+                                <div class="number-input-controls">
+                                    <button type="button" class="num-up" data-target="flagBorderWidth"><i class="fas fa-chevron-up"></i></button>
+                                    <button type="button" class="num-down" data-target="flagBorderWidth"><i class="fas fa-chevron-down"></i></button>
+                                </div>
+                            </div>
+                            <span class="config-label">pixels</span>
+                        </div>
+                        <p class="config-hint">Border thickness around the editor when a flag is set.</p>
+                    </div>
+                </div>
+
+                <div class="settings-divider-line"></div>
+
+                <div class="settings-section">
                     <h4><i class="fas fa-bell"></i> Notifications</h4>
                     <p class="settings-description">Configure toast notification preferences.</p>
 
@@ -776,6 +867,74 @@
         <button class="context-menu-item" id="hideBubbleBtn">
             <i class="fas fa-eye-slash"></i> Hide Document Bar
         </button>
+    </div>
+
+    <!-- Hamburger Context Menu -->
+    <div class="bubble-context-menu" id="hamburgerContextMenu">
+        <button class="context-menu-item" id="hideHamburgerBtn">
+            <i class="fas fa-eye-slash"></i> Hide Document Bar
+        </button>
+    </div>
+
+    <!-- Add Button Context Menu -->
+    <div class="bubble-context-menu" id="addContextMenu">
+        <button class="context-menu-item" id="newFolderBtn">
+            <i class="fas fa-folder-plus"></i> New Folder
+        </button>
+    </div>
+
+    <!-- Folder Context Menu -->
+    <div class="bubble-context-menu" id="folderContextMenu">
+        <button class="context-menu-item" id="openFolderBtn">
+            <i class="fas fa-folder-open"></i> Open Folder
+        </button>
+        <button class="context-menu-item" id="renameFolderBtn">
+            <i class="fas fa-edit"></i> Rename Folder
+        </button>
+        <div class="context-menu-divider"></div>
+        <button class="context-menu-item context-menu-danger" id="deleteFolderBtn">
+            <i class="fas fa-trash"></i> Delete Folder
+        </button>
+    </div>
+
+    <!-- Create Folder Modal -->
+    <div class="modal" id="createFolderModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-folder-plus"></i> Create New Folder</h3>
+                <button class="modal-close" id="createFolderModalClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="folderNameInput">Folder Name</label>
+                    <input type="text" id="folderNameInput" placeholder="Enter folder name..." maxlength="50">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="createFolderCancelBtn">Cancel</button>
+                <button class="btn btn-primary" id="createFolderConfirmBtn">Create Folder</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rename Folder Modal -->
+    <div class="modal" id="renameFolderModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-edit"></i> Rename Folder</h3>
+                <button class="modal-close" id="renameFolderModalClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="renameFolderInput">Folder Name</label>
+                    <input type="text" id="renameFolderInput" placeholder="Enter new folder name..." maxlength="50">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="renameFolderCancelBtn">Cancel</button>
+                <button class="btn btn-primary" id="renameFolderConfirmBtn">Rename</button>
+            </div>
+        </div>
     </div>
 
     <script src="script.js"></script>

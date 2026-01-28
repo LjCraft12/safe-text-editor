@@ -49,6 +49,20 @@ class WYSIWYGEditor {
         // Toast settings state
         this.toastSettings = this.loadToastSettings();
 
+        // Folder state
+        this.folders = this.loadFolders();
+        this.currentFolderId = null;
+        this.contextDocId = null;
+        this.contextDocType = null; // 'saved' or 'autosave'
+        this.contextFolderId = null;
+
+        // Accordion state
+        this.accordionState = this.loadAccordionState();
+
+        // Flag state
+        this.currentFlag = 'none';
+        this.flagBorderWidth = this.loadFlagBorderWidth();
+
         // Modal state management
         this.previousModal = null;
 
@@ -64,6 +78,9 @@ class WYSIWYGEditor {
         this.initAutoSave();
         this.initAutoSaveWarningModal();
         this.initToastSettingsModal();
+        this.initFolders();
+        this.initAccordion();
+        this.initEditMenu();
         this.bindToolbarButtons();
         this.bindSelects();
         this.bindColorPickers();
@@ -73,6 +90,7 @@ class WYSIWYGEditor {
         this.bindEditorEvents();
         this.renderDocumentList();
         this.renderAutoSaveDocumentList();
+        this.renderFolderList();
         this.updateCounts();
 
         // Check for expiring auto-saves on load
@@ -1918,6 +1936,9 @@ class WYSIWYGEditor {
             'wysiwyg_autosave_settings',
             'wysiwyg_autosave_documents',
             'wysiwyg_toast_settings',
+            'wysiwyg_folders',
+            'wysiwyg_accordion_state',
+            'wysiwyg_flag_border_width',
             'wysiwyg_theme' // Legacy key
         ];
 
@@ -2057,12 +2078,14 @@ class WYSIWYGEditor {
         const unitSelect = document.getElementById('autoSaveUnit');
         const limitInput = document.getElementById('autoSaveLimit');
         const deleteInput = document.getElementById('autoDeleteDays');
+        const flagBorderInput = document.getElementById('flagBorderWidth');
 
         // Populate current values
         if (valueInput) valueInput.value = this.autoSaveValue;
         if (unitSelect) unitSelect.value = this.autoSaveUnit;
         if (limitInput) limitInput.value = this.autoSaveLimit;
         if (deleteInput) deleteInput.value = this.autoDeleteDays;
+        if (flagBorderInput) flagBorderInput.value = this.flagBorderWidth;
 
         this.updateAutoSaveHint();
         modal.classList.add('show');
@@ -2077,11 +2100,13 @@ class WYSIWYGEditor {
         const unitSelect = document.getElementById('autoSaveUnit');
         const limitInput = document.getElementById('autoSaveLimit');
         const deleteInput = document.getElementById('autoDeleteDays');
+        const flagBorderInput = document.getElementById('flagBorderWidth');
 
         const newValue = parseInt(valueInput.value) || 5;
         const newUnit = unitSelect.value;
         const newLimit = parseInt(limitInput.value) || 3;
         const newDeleteDays = parseInt(deleteInput.value) || 7;
+        const newFlagBorderWidth = parseInt(flagBorderInput.value) || 3;
 
         // Validate
         if (newValue < 1) {
@@ -2096,12 +2121,21 @@ class WYSIWYGEditor {
             deleteInput.value = 1;
             return;
         }
+        if (newFlagBorderWidth < 1 || newFlagBorderWidth > 10) {
+            flagBorderInput.value = 3;
+            return;
+        }
 
         this.autoSaveValue = newValue;
         this.autoSaveUnit = newUnit;
         this.autoSaveLimit = newLimit;
         this.autoDeleteDays = newDeleteDays;
+        this.flagBorderWidth = newFlagBorderWidth;
         this.saveAutoSaveSettings();
+        this.saveFlagBorderWidth();
+
+        // Apply flag border width immediately
+        this.applyFlagToEditor();
 
         // Apply new limit - remove excess auto-saves
         while (this.autoSaveDocuments.length > this.autoSaveLimit) {
@@ -2291,6 +2325,556 @@ class WYSIWYGEditor {
         }
     }
 
+    // ==================== Folders ====================
+
+    loadFolders() {
+        const saved = localStorage.getItem('wysiwyg_folders');
+        return saved ? JSON.parse(saved) : [];
+    }
+
+    saveFolders() {
+        localStorage.setItem('wysiwyg_folders', JSON.stringify(this.folders));
+    }
+
+    loadAccordionState() {
+        const saved = localStorage.getItem('wysiwyg_accordion_state');
+        return saved ? JSON.parse(saved) : { saved: false, folders: false, autosave: false };
+    }
+
+    saveAccordionState() {
+        localStorage.setItem('wysiwyg_accordion_state', JSON.stringify(this.accordionState));
+    }
+
+    initAccordion() {
+        // Apply saved accordion state
+        Object.keys(this.accordionState).forEach(section => {
+            if (this.accordionState[section]) {
+                const sectionEl = document.querySelector(`.accordion-section[data-section="${section}"]`);
+                if (sectionEl) {
+                    sectionEl.classList.add('collapsed');
+                }
+            }
+        });
+
+        // Bind accordion toggle clicks
+        document.querySelectorAll('.accordion-header').forEach(header => {
+            header.addEventListener('click', (e) => {
+                const section = header.dataset.toggle;
+                const sectionEl = header.closest('.accordion-section');
+
+                sectionEl.classList.toggle('collapsed');
+                this.accordionState[section] = sectionEl.classList.contains('collapsed');
+                this.saveAccordionState();
+            });
+        });
+    }
+
+    initFolders() {
+        const hamburgerBtn = document.getElementById('hamburgerBtn');
+        const addBtn = document.getElementById('addBtn');
+        const hamburgerContextMenu = document.getElementById('hamburgerContextMenu');
+        const addContextMenu = document.getElementById('addContextMenu');
+        const docContextMenu = document.getElementById('docContextMenu');
+        const folderContextMenu = document.getElementById('folderContextMenu');
+
+        // Right-click on hamburger button - show hide document bar option
+        hamburgerBtn.addEventListener('contextmenu', (e) => {
+            if (!this.sidebarCollapsed) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.hideAllContextMenus();
+                this.showContextMenu(hamburgerContextMenu, e.clientX, e.clientY);
+            }
+        });
+
+        // Hide document bar from hamburger context menu
+        document.getElementById('hideHamburgerBtn').addEventListener('click', () => {
+            this.hideAllContextMenus();
+            this.toggleSidebar();
+        });
+
+        // Click on plus button - show add menu
+        addBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.hideAllContextMenus();
+            const rect = addBtn.getBoundingClientRect();
+            this.showContextMenu(addContextMenu, rect.left, rect.bottom + 4);
+        });
+
+        // New folder button from add menu
+        document.getElementById('newFolderBtn').addEventListener('click', () => {
+            this.hideAllContextMenus();
+            this.openCreateFolderModal();
+        });
+
+        // Create folder modal
+        document.getElementById('createFolderModalClose').addEventListener('click', () => {
+            this.closeCreateFolderModal();
+        });
+        document.getElementById('createFolderCancelBtn').addEventListener('click', () => {
+            this.closeCreateFolderModal();
+        });
+        document.getElementById('createFolderConfirmBtn').addEventListener('click', () => {
+            this.createFolder();
+        });
+        document.getElementById('createFolderModal').addEventListener('click', (e) => {
+            if (e.target.id === 'createFolderModal') this.closeCreateFolderModal();
+        });
+        document.getElementById('folderNameInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') this.createFolder();
+        });
+
+        // Rename folder modal
+        document.getElementById('renameFolderModalClose').addEventListener('click', () => {
+            this.closeRenameFolderModal();
+        });
+        document.getElementById('renameFolderCancelBtn').addEventListener('click', () => {
+            this.closeRenameFolderModal();
+        });
+        document.getElementById('renameFolderConfirmBtn').addEventListener('click', () => {
+            this.renameFolder();
+        });
+        document.getElementById('renameFolderModal').addEventListener('click', (e) => {
+            if (e.target.id === 'renameFolderModal') this.closeRenameFolderModal();
+        });
+        document.getElementById('renameFolderInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') this.renameFolder();
+        });
+
+        // Folder context menu actions
+        document.getElementById('openFolderBtn').addEventListener('click', () => {
+            this.hideAllContextMenus();
+            this.openFolder(this.contextFolderId);
+        });
+        document.getElementById('renameFolderBtn').addEventListener('click', () => {
+            this.hideAllContextMenus();
+            this.openRenameFolderModal();
+        });
+        document.getElementById('deleteFolderBtn').addEventListener('click', () => {
+            this.hideAllContextMenus();
+            this.deleteFolder(this.contextFolderId);
+        });
+
+        // Back button
+        document.getElementById('folderBackBtn').addEventListener('click', () => {
+            this.exitFolderView();
+        });
+
+        // Close context menus on click outside
+        document.addEventListener('click', () => {
+            this.hideAllContextMenus();
+        });
+
+        // Close context menus on scroll
+        document.addEventListener('scroll', () => {
+            this.hideAllContextMenus();
+        }, true);
+    }
+
+    hideAllContextMenus() {
+        document.querySelectorAll('.bubble-context-menu').forEach(menu => {
+            menu.classList.remove('show');
+        });
+    }
+
+    showContextMenu(menu, x, y) {
+        menu.style.left = `${x}px`;
+        menu.style.top = `${y}px`;
+        menu.classList.add('show');
+
+        // Adjust if menu goes off screen
+        const rect = menu.getBoundingClientRect();
+        if (rect.right > window.innerWidth) {
+            menu.style.left = `${x - rect.width}px`;
+        }
+        if (rect.bottom > window.innerHeight) {
+            menu.style.top = `${y - rect.height}px`;
+        }
+    }
+
+    showFolderContextMenu(e, folderId) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        this.contextFolderId = folderId;
+
+        this.hideAllContextMenus();
+
+        const menu = document.getElementById('folderContextMenu');
+        this.showContextMenu(menu, e.clientX, e.clientY);
+    }
+
+    openCreateFolderModal() {
+        document.getElementById('folderNameInput').value = '';
+        document.getElementById('createFolderModal').classList.add('show');
+        setTimeout(() => document.getElementById('folderNameInput').focus(), 100);
+    }
+
+    closeCreateFolderModal() {
+        document.getElementById('createFolderModal').classList.remove('show');
+    }
+
+    createFolder() {
+        const name = document.getElementById('folderNameInput').value.trim();
+        if (!name) return;
+
+        const folder = {
+            id: 'folder_' + Date.now().toString(),
+            name: name,
+            createdAt: new Date().toISOString(),
+            documents: [] // Array of { id, type: 'saved' | 'autosave' }
+        };
+
+        this.folders.push(folder);
+        this.saveFolders();
+        this.renderFolderList();
+        this.closeCreateFolderModal();
+        this.showNotification('Folder created!', 'settings');
+    }
+
+    openRenameFolderModal() {
+        const folder = this.folders.find(f => f.id === this.contextFolderId);
+        if (!folder) return;
+
+        document.getElementById('renameFolderInput').value = folder.name;
+        document.getElementById('renameFolderModal').classList.add('show');
+        setTimeout(() => {
+            const input = document.getElementById('renameFolderInput');
+            input.focus();
+            input.select();
+        }, 100);
+    }
+
+    closeRenameFolderModal() {
+        document.getElementById('renameFolderModal').classList.remove('show');
+    }
+
+    renameFolder() {
+        const name = document.getElementById('renameFolderInput').value.trim();
+        if (!name) return;
+
+        const folder = this.folders.find(f => f.id === this.contextFolderId);
+        if (folder) {
+            folder.name = name;
+            this.saveFolders();
+            this.renderFolderList();
+
+            // Update title if in folder view
+            if (this.currentFolderId === this.contextFolderId) {
+                document.getElementById('sidebarTitle').innerHTML = `<i class="fas fa-folder-open"></i> ${name}`;
+            }
+        }
+
+        this.closeRenameFolderModal();
+        this.showNotification('Folder renamed!', 'settings');
+    }
+
+    deleteFolder(folderId) {
+        const folder = this.folders.find(f => f.id === folderId);
+        if (!folder) return;
+
+        if (!confirm(`Delete folder "${folder.name}"? Documents inside will be moved back to their original sections.`)) {
+            return;
+        }
+
+        // Move all documents back out of folder
+        folder.documents.forEach(docRef => {
+            // Documents are just references, they go back to normal view
+        });
+
+        this.folders = this.folders.filter(f => f.id !== folderId);
+        this.saveFolders();
+
+        // Exit folder view if we're in it
+        if (this.currentFolderId === folderId) {
+            this.exitFolderView();
+        }
+
+        this.renderFolderList();
+        this.renderDocumentList();
+        this.renderAutoSaveDocumentList();
+        this.showNotification('Folder deleted!', 'docDelete');
+    }
+
+    moveDocToFolder(docId, docType, folderId) {
+        const folder = this.folders.find(f => f.id === folderId);
+        if (!folder) return;
+
+        // Check if already in a folder and remove
+        this.folders.forEach(f => {
+            f.documents = f.documents.filter(d => !(d.id === docId && d.type === docType));
+        });
+
+        // Add to new folder
+        folder.documents.push({ id: docId, type: docType });
+        this.saveFolders();
+
+        this.renderDocumentList();
+        this.renderAutoSaveDocumentList();
+        this.renderFolderList();
+        this.showNotification(`Moved to "${folder.name}"`, 'settings');
+    }
+
+    isDocInFolder(docId, docType) {
+        return this.folders.some(f => f.documents.some(d => d.id === docId && d.type === docType));
+    }
+
+    getDocFolder(docId, docType) {
+        return this.folders.find(f => f.documents.some(d => d.id === docId && d.type === docType));
+    }
+
+    removeDocFromFolder(docId, docType) {
+        this.folders.forEach(f => {
+            f.documents = f.documents.filter(d => !(d.id === docId && d.type === docType));
+        });
+        this.saveFolders();
+    }
+
+    renderFolderList() {
+        const list = document.getElementById('folderList');
+        const countEl = document.getElementById('folderCount');
+
+        if (countEl) {
+            countEl.textContent = this.folders.length;
+        }
+
+        if (this.folders.length === 0) {
+            list.innerHTML = '<li class="no-docs">No folders created yet</li>';
+            return;
+        }
+
+        list.innerHTML = this.folders.map(folder => `
+            <li data-folder-id="${folder.id}">
+                <span class="doc-name">${folder.name}</span>
+                <span class="folder-doc-count">${folder.documents.length}</span>
+            </li>
+        `).join('');
+
+        // Bind events
+        list.querySelectorAll('li:not(.no-docs)').forEach(item => {
+            const folderId = item.dataset.folderId;
+
+            // Double-click to open
+            item.addEventListener('dblclick', () => {
+                this.openFolder(folderId);
+            });
+
+            // Right-click for context menu
+            item.addEventListener('contextmenu', (e) => {
+                this.showFolderContextMenu(e, folderId);
+            });
+
+            // Single click just selects
+            item.addEventListener('click', () => {
+                list.querySelectorAll('li').forEach(li => li.classList.remove('active'));
+                item.classList.add('active');
+            });
+        });
+    }
+
+    openFolder(folderId) {
+        const folder = this.folders.find(f => f.id === folderId);
+        if (!folder) return;
+
+        this.currentFolderId = folderId;
+
+        // Update UI
+        document.getElementById('normalDocView').style.display = 'none';
+        document.getElementById('folderDocView').style.display = 'block';
+        document.getElementById('folderBackBtn').style.display = 'block';
+        document.getElementById('sidebarTitle').innerHTML = `<i class="fas fa-folder-open"></i> ${folder.name}`;
+
+        this.renderFolderContents();
+    }
+
+    exitFolderView() {
+        this.currentFolderId = null;
+
+        // Update UI
+        document.getElementById('normalDocView').style.display = 'block';
+        document.getElementById('folderDocView').style.display = 'none';
+        document.getElementById('folderBackBtn').style.display = 'none';
+        document.getElementById('sidebarTitle').innerHTML = '<i class="fas fa-folder"></i> Documents';
+
+        // Refresh lists
+        this.renderDocumentList();
+        this.renderAutoSaveDocumentList();
+        this.renderFolderList();
+    }
+
+    renderFolderContents() {
+        const folder = this.folders.find(f => f.id === this.currentFolderId);
+        if (!folder) return;
+
+        const list = document.getElementById('folderContentsList');
+
+        if (folder.documents.length === 0) {
+            list.innerHTML = '<li class="no-docs">This folder is empty</li>';
+            return;
+        }
+
+        const docsHtml = folder.documents.map(docRef => {
+            let doc;
+            let isAutoSave = false;
+
+            if (docRef.type === 'saved') {
+                doc = this.documents.find(d => d.id === docRef.id);
+            } else {
+                doc = this.autoSaveDocuments.find(d => d.id === docRef.id);
+                isAutoSave = true;
+            }
+
+            if (!doc) return ''; // Document was deleted
+
+            return `
+                <li class="${isAutoSave ? 'autosave-doc' : ''}" data-id="${doc.id}" data-type="${docRef.type}">
+                    <span class="doc-name">${doc.title}</span>
+                    <button class="delete-btn" title="Remove from folder">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </li>
+            `;
+        }).filter(html => html).join('');
+
+        if (!docsHtml) {
+            list.innerHTML = '<li class="no-docs">This folder is empty</li>';
+            return;
+        }
+
+        list.innerHTML = docsHtml;
+
+        // Bind events
+        list.querySelectorAll('li:not(.no-docs)').forEach(item => {
+            const docId = item.dataset.id;
+            const docType = item.dataset.type;
+
+            item.addEventListener('click', (e) => {
+                if (!e.target.closest('.delete-btn')) {
+                    if (docType === 'saved') {
+                        this.loadDocument(docId);
+                    } else {
+                        this.loadAutoSaveDocument(docId);
+                    }
+                }
+            });
+
+            item.querySelector('.delete-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.removeDocFromFolder(docId, docType);
+                this.renderFolderContents();
+                this.showNotification('Removed from folder', 'settings');
+            });
+        });
+    }
+
+    // ==================== Edit Menu & Flags ====================
+
+    initEditMenu() {
+        const editMenuBtn = document.getElementById('editMenuBtn');
+        const editMenu = document.getElementById('editMenu');
+
+        // Toggle menu
+        editMenuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.closeAllDropdowns();
+            editMenu.classList.toggle('show');
+        });
+
+        // Undo button
+        document.getElementById('undoMenuBtn').addEventListener('click', () => {
+            document.execCommand('undo');
+            editMenu.classList.remove('show');
+        });
+
+        // Redo button
+        document.getElementById('redoMenuBtn').addEventListener('click', () => {
+            document.execCommand('redo');
+            editMenu.classList.remove('show');
+        });
+
+        // Flag buttons
+        document.querySelectorAll('.flag-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const flag = item.dataset.flag;
+                this.setDocumentFlag(flag);
+                editMenu.classList.remove('show');
+            });
+        });
+
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!editMenuBtn.contains(e.target) && !editMenu.contains(e.target)) {
+                editMenu.classList.remove('show');
+            }
+        });
+    }
+
+    loadFlagBorderWidth() {
+        const saved = localStorage.getItem('wysiwyg_flag_border_width');
+        return saved ? parseInt(saved) : 3;
+    }
+
+    saveFlagBorderWidth() {
+        localStorage.setItem('wysiwyg_flag_border_width', this.flagBorderWidth.toString());
+    }
+
+    setDocumentFlag(flag) {
+        this.currentFlag = flag;
+        this.applyFlagToEditor();
+        this.updateFlagMenuState();
+
+        // Save flag with current document if saved
+        if (this.currentDocId) {
+            const doc = this.documents.find(d => d.id === this.currentDocId);
+            if (doc) {
+                doc.flag = flag;
+                this.saveDocuments();
+                this.renderDocumentList();
+            }
+        }
+
+        const flagNames = {
+            'none': 'No flag',
+            'red': 'Red - Urgent',
+            'orange': 'Orange - Important',
+            'yellow': 'Yellow - Review',
+            'green': 'Green - Complete',
+            'blue': 'Blue - In Progress',
+            'purple': 'Purple - Ideas'
+        };
+
+        this.showNotification(`Flag set: ${flagNames[flag]}`, 'settings');
+    }
+
+    applyFlagToEditor() {
+        const editorWrapper = document.querySelector('.editor-wrapper');
+
+        // Remove all flag classes
+        editorWrapper.classList.remove('flagged', 'flag-red', 'flag-orange', 'flag-yellow', 'flag-green', 'flag-blue', 'flag-purple');
+
+        if (this.currentFlag !== 'none') {
+            editorWrapper.classList.add('flagged', `flag-${this.currentFlag}`);
+            editorWrapper.style.borderWidth = `${this.flagBorderWidth}px`;
+        } else {
+            editorWrapper.style.borderWidth = '';
+        }
+    }
+
+    updateFlagMenuState() {
+        document.querySelectorAll('.flag-item').forEach(item => {
+            item.classList.remove('active');
+            if (item.dataset.flag === this.currentFlag) {
+                item.classList.add('active');
+            }
+        });
+    }
+
+    closeAllDropdowns() {
+        document.querySelectorAll('.dropdown-menu').forEach(menu => {
+            menu.classList.remove('show');
+        });
+    }
+
     // ==================== Auto-Save ====================
 
     loadAutoSaveSettings() {
@@ -2452,11 +3036,14 @@ class WYSIWYGEditor {
 
         if (!list) return;
 
+        // Filter out documents that are in folders
+        const visibleDocs = this.autoSaveDocuments.filter(doc => !this.isDocInFolder(doc.id, 'autosave'));
+
         if (countEl) {
-            countEl.textContent = this.autoSaveDocuments.length;
+            countEl.textContent = visibleDocs.length;
         }
 
-        if (this.autoSaveDocuments.length === 0) {
+        if (visibleDocs.length === 0) {
             list.innerHTML = '<li class="no-docs">No auto-saved documents</li>';
             return;
         }
@@ -2464,7 +3051,7 @@ class WYSIWYGEditor {
         const now = new Date();
         const oneDayMs = 24 * 60 * 60 * 1000;
 
-        list.innerHTML = this.autoSaveDocuments.map(doc => {
+        list.innerHTML = visibleDocs.map(doc => {
             const expiresAt = new Date(doc.expiresAt);
             const timeUntilExpiry = expiresAt - now;
             const isExpiringSoon = timeUntilExpiry <= oneDayMs && timeUntilExpiry > 0;
@@ -2535,7 +3122,15 @@ class WYSIWYGEditor {
     deleteAutoSaveDocument(docId) {
         this.autoSaveDocuments = this.autoSaveDocuments.filter(d => d.id !== docId);
         this.saveAutoSaveDocuments();
+
+        // Also remove from any folders
+        this.removeDocFromFolder(docId, 'autosave');
+
         this.renderAutoSaveDocumentList();
+        this.renderFolderList();
+        if (this.currentFolderId) {
+            this.renderFolderContents();
+        }
         this.showNotification('Auto-save deleted', 'docDelete');
     }
 
@@ -2697,6 +3292,11 @@ class WYSIWYGEditor {
         this.updateCounts();
         this.renderDocumentList();
 
+        // Reset flag
+        this.currentFlag = 'none';
+        this.applyFlagToEditor();
+        this.updateFlagMenuState();
+
         // Reset auto-save counters
         this.autoSaveWordCount = 0;
         this.autoSaveCharCount = 0;
@@ -2739,6 +3339,12 @@ class WYSIWYGEditor {
             this.editor.innerHTML = doc.content;
             document.getElementById('docTitle').value = doc.title;
             this.currentDocId = doc.id;
+
+            // Load document flag
+            this.currentFlag = doc.flag || 'none';
+            this.applyFlagToEditor();
+            this.updateFlagMenuState();
+
             this.updateCounts();
             this.renderDocumentList();
         }
@@ -2749,11 +3355,18 @@ class WYSIWYGEditor {
             this.documents = this.documents.filter(doc => doc.id !== docId);
             this.saveDocuments();
 
+            // Also remove from any folders
+            this.removeDocFromFolder(docId, 'saved');
+
             if (this.currentDocId === docId) {
                 this.newDocument();
             }
 
             this.renderDocumentList();
+            this.renderFolderList();
+            if (this.currentFolderId) {
+                this.renderFolderContents();
+            }
             this.showNotification('Document deleted!', 'docDelete');
         }
     }
@@ -2771,28 +3384,34 @@ class WYSIWYGEditor {
         const list = document.getElementById('docList');
         const countEl = document.getElementById('savedDocCount');
 
+        // Filter out documents that are in folders
+        const visibleDocs = this.documents.filter(doc => !this.isDocInFolder(doc.id, 'saved'));
+
         if (countEl) {
-            countEl.textContent = this.documents.length;
+            countEl.textContent = visibleDocs.length;
         }
 
-        if (this.documents.length === 0) {
+        if (visibleDocs.length === 0) {
             list.innerHTML = '<li class="no-docs">No documents saved yet</li>';
             return;
         }
 
         // Sort by updated date (newest first)
-        const sortedDocs = [...this.documents].sort((a, b) =>
+        const sortedDocs = [...visibleDocs].sort((a, b) =>
             new Date(b.updatedAt) - new Date(a.updatedAt)
         );
 
-        list.innerHTML = sortedDocs.map(doc => `
-            <li class="${doc.id === this.currentDocId ? 'active' : ''}" data-id="${doc.id}">
-                <span class="doc-name" title="${doc.title}">${doc.title}</span>
-                <button class="delete-btn" data-delete="${doc.id}" title="Delete">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </li>
-        `).join('');
+        list.innerHTML = sortedDocs.map(doc => {
+            const flagClass = doc.flag && doc.flag !== 'none' ? `doc-flag-${doc.flag}` : '';
+            return `
+                <li class="${doc.id === this.currentDocId ? 'active' : ''} ${flagClass}" data-id="${doc.id}">
+                    <span class="doc-name" title="${doc.title}">${doc.title}</span>
+                    <button class="delete-btn" data-delete="${doc.id}" title="Delete">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </li>
+            `;
+        }).join('');
 
         // Bind click events
         list.querySelectorAll('li[data-id]').forEach(item => {

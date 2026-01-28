@@ -749,6 +749,177 @@ body {
     overflow-x: hidden;
 }
 
+/* ==================== Accordion Styles ==================== */
+
+.accordion-section {
+    margin-bottom: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+.accordion-header {
+    cursor: pointer;
+    padding: 10px 12px;
+    background: var(--bg-color);
+    border-bottom: none;
+    margin-bottom: 0;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.accordion-header:hover {
+    background: var(--border-color);
+}
+
+.accordion-header span:first-child {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.accordion-icon {
+    font-size: 10px;
+    transition: transform 0.3s ease;
+    width: 12px;
+}
+
+.accordion-section.collapsed .accordion-icon {
+    transform: rotate(-90deg);
+}
+
+.accordion-content {
+    max-height: 500px;
+    overflow: hidden;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+    padding: 8px;
+}
+
+.accordion-section.collapsed .accordion-content {
+    max-height: 0;
+    padding: 0 8px;
+}
+
+/* Folder styles */
+.folder-list li {
+    border-left: 3px solid #f59e0b;
+}
+
+.folder-list li::before {
+    content: '\f07b' !important;
+    color: #f59e0b !important;
+}
+
+.sidebar.wide .folder-list li::before {
+    content: '\f07b' !important;
+    font-family: 'Font Awesome 6 Free' !important;
+    font-weight: 900 !important;
+}
+
+/* Folder view */
+#folderDocView {
+    height: 100%;
+}
+
+.folder-contents {
+    height: 100%;
+}
+
+/* Back button */
+.back-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-light);
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    transition: all 0.2s ease;
+    margin-left: auto;
+}
+
+.back-btn:hover {
+    background: var(--bg-color);
+    color: var(--text-color);
+}
+
+/* Add button in sidebar header */
+.add-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-light);
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    transition: all 0.2s ease;
+    font-size: 14px;
+}
+
+.add-btn:hover {
+    background: var(--bg-color);
+    color: var(--primary-color);
+}
+
+.sidebar-header h3 {
+    flex: 1;
+}
+
+/* Context menu styles */
+.context-menu-divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: 4px 0;
+}
+
+.context-menu-danger {
+    color: #ef4444 !important;
+}
+
+.context-menu-danger:hover {
+    background: rgba(239, 68, 68, 0.1) !important;
+}
+
+.context-submenu-arrow {
+    margin-left: auto;
+    font-size: 10px;
+    color: var(--text-light);
+}
+
+.submenu {
+    min-width: 150px;
+}
+
+.submenu .context-menu-item {
+    font-size: 13px;
+    padding: 8px 14px;
+}
+
+.no-folders-msg {
+    padding: 12px 16px;
+    color: var(--text-light);
+    font-style: italic;
+    font-size: 13px;
+}
+
+/* Folder document count badge */
+.folder-doc-count {
+    background: var(--primary-color);
+    color: white;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    margin-left: auto;
+}
+
+/* Autosave docs in folder view */
+.folder-contents li.autosave-doc {
+    border-left: 3px solid var(--primary-color);
+}
+
+/* Document in folder indicator */
+.doc-list li.in-folder {
+    display: none;
+}
+
 /* Auto-save document styling */
 .doc-list-autosave li {
     border-left: 3px solid var(--primary-color);
@@ -2347,3 +2518,137 @@ body {
 #toastIndividualSettings.disabled .toast-options-list {
     filter: grayscale(1);
 }
+
+/* ==================== Edit Menu Styles ==================== */
+
+#editMenu {
+    display: none;
+    flex-direction: column;
+    min-width: 220px;
+}
+
+#editMenu.show {
+    display: flex;
+}
+
+.dropdown-item .shortcut {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--text-light);
+    opacity: 0.7;
+}
+
+/* Flag color indicators */
+.flag-color {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 8px;
+    border: 2px solid rgba(0, 0, 0, 0.1);
+}
+
+.flag-item {
+    display: flex;
+    align-items: center;
+}
+
+.flag-item.active {
+    background: rgba(59, 130, 246, 0.08);
+    border-left: 3px solid var(--primary-color);
+    padding-left: 13px;
+}
+
+[data-theme="dark"] .flag-item.active {
+    background: rgba(96, 165, 250, 0.1);
+}
+
+/* ==================== Editor Flag Border ==================== */
+
+.editor-wrapper.flagged {
+    border: 3px solid transparent;
+    border-radius: var(--radius);
+    transition: border-color 0.3s ease;
+}
+
+.editor-wrapper.flag-red {
+    border-color: #ef4444;
+}
+
+.editor-wrapper.flag-orange {
+    border-color: #f97316;
+}
+
+.editor-wrapper.flag-yellow {
+    border-color: #eab308;
+}
+
+.editor-wrapper.flag-green {
+    border-color: #22c55e;
+}
+
+.editor-wrapper.flag-blue {
+    border-color: #3b82f6;
+}
+
+.editor-wrapper.flag-purple {
+    border-color: #a855f7;
+}
+
+/* ==================== Document List Flag Indicators ==================== */
+
+.doc-list li.doc-flag-red {
+    border-left: 3px solid #ef4444;
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.doc-list li.doc-flag-orange {
+    border-left: 3px solid #f97316;
+    background: rgba(249, 115, 22, 0.05);
+}
+
+.doc-list li.doc-flag-yellow {
+    border-left: 3px solid #eab308;
+    background: rgba(234, 179, 8, 0.05);
+}
+
+.doc-list li.doc-flag-green {
+    border-left: 3px solid #22c55e;
+    background: rgba(34, 197, 94, 0.05);
+}
+
+.doc-list li.doc-flag-blue {
+    border-left: 3px solid #3b82f6;
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.doc-list li.doc-flag-purple {
+    border-left: 3px solid #a855f7;
+    background: rgba(168, 85, 247, 0.05);
+}
+
+/* Dark mode adjustments for flag backgrounds */
+[data-theme="dark"] .doc-list li.doc-flag-red {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+[data-theme="dark"] .doc-list li.doc-flag-orange {
+    background: rgba(249, 115, 22, 0.1);
+}
+
+[data-theme="dark"] .doc-list li.doc-flag-yellow {
+    background: rgba(234, 179, 8, 0.1);
+}
+
+[data-theme="dark"] .doc-list li.doc-flag-green {
+    background: rgba(34, 197, 94, 0.1);
+}
+
+[data-theme="dark"] .doc-list li.doc-flag-blue {
+    background: rgba(59, 130, 246, 0.1);
+}
+
+[data-theme="dark"] .doc-list li.doc-flag-purple {
+    background: rgba(168, 85, 247, 0.1);
+}
+
