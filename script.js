@@ -5,7 +5,9 @@ class WYSIWYGEditor {
         this.editor = document.getElementById('editor');
         this.documents = this.loadDocuments();
         this.currentDocId = null;
-        this.darkMode = this.loadThemePreference();
+
+        // Theme mode: 'light', 'theme', or 'dark'
+        this.themeMode = this.loadThemeMode();
 
         // Spellcheck & Autocorrect settings
         this.spellcheckEnabled = true;
@@ -26,13 +28,42 @@ class WYSIWYGEditor {
         this.bubbleHidden = false;
         this.wasDockedBeforeHide = true; // Track state before hiding
 
+        // Theme state
+        this.currentTheme = this.loadCurrentTheme();
+        this.previewTheme = null;
+        this.originalTheme = null;
+
+        // Auto-save state
+        this.autoSaveEnabled = false;
+        this.autoSaveValue = 5;
+        this.autoSaveUnit = 'minutes';
+        this.autoSaveLimit = 3;
+        this.autoDeleteDays = 7;
+        this.autoSaveTimer = null;
+        this.autoSaveWordCount = 0;
+        this.autoSaveCharCount = 0;
+        this.autoSaveChangeCount = 0;
+        this.autoSaveDocuments = this.loadAutoSaveDocuments();
+        this.loadAutoSaveSettings();
+
+        // Toast settings state
+        this.toastSettings = this.loadToastSettings();
+
+        // Modal state management
+        this.previousModal = null;
+
         this.init();
     }
 
     init() {
-        this.initDarkMode();
+        this.initThemes();
         this.initSidebar();
         this.initSpellcheckAutocorrect();
+        this.initResetModal();
+        this.initSettingsMenu();
+        this.initAutoSave();
+        this.initAutoSaveWarningModal();
+        this.initToastSettingsModal();
         this.bindToolbarButtons();
         this.bindSelects();
         this.bindColorPickers();
@@ -41,59 +72,506 @@ class WYSIWYGEditor {
         this.bindHeaderActions();
         this.bindEditorEvents();
         this.renderDocumentList();
+        this.renderAutoSaveDocumentList();
         this.updateCounts();
+
+        // Check for expiring auto-saves on load
+        this.checkExpiringAutoSaves();
     }
 
-    // ==================== Dark Mode ====================
+    // ==================== Themes ====================
 
-    initDarkMode() {
-        const toggle = document.getElementById('darkModeToggle');
-
-        // Apply saved preference
-        if (this.darkMode) {
-            document.documentElement.setAttribute('data-theme', 'dark');
-            toggle.checked = true;
-        }
-
-        // Bind toggle event
-        toggle.addEventListener('change', (e) => {
-            this.toggleDarkMode(e.target.checked);
-        });
-
-        // Listen for system theme changes
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-            if (localStorage.getItem('wysiwyg_theme') === null) {
-                this.toggleDarkMode(e.matches, false);
-                toggle.checked = e.matches;
+    getThemes() {
+        return [
+            {
+                id: 'default',
+                name: 'Default Blue',
+                colors: {
+                    primary: '#3b82f6',
+                    primaryHover: '#2563eb',
+                    bg: '#f3f4f6',
+                    white: '#ffffff',
+                    border: '#e5e7eb',
+                    text: '#1f2937',
+                    textLight: '#6b7280',
+                    toolbar: '#fafafa',
+                    activeItem: '#dbeafe'
+                }
+            },
+            {
+                id: 'emerald',
+                name: 'Emerald Green',
+                colors: {
+                    primary: '#10b981',
+                    primaryHover: '#059669',
+                    bg: '#f0fdf4',
+                    white: '#ffffff',
+                    border: '#d1fae5',
+                    text: '#064e3b',
+                    textLight: '#6b7280',
+                    toolbar: '#f0fdf4',
+                    activeItem: '#d1fae5'
+                }
+            },
+            {
+                id: 'purple',
+                name: 'Royal Purple',
+                colors: {
+                    primary: '#8b5cf6',
+                    primaryHover: '#7c3aed',
+                    bg: '#faf5ff',
+                    white: '#ffffff',
+                    border: '#e9d5ff',
+                    text: '#3b0764',
+                    textLight: '#7c3aed',
+                    toolbar: '#faf5ff',
+                    activeItem: '#e9d5ff'
+                }
+            },
+            {
+                id: 'rose',
+                name: 'Rose Pink',
+                colors: {
+                    primary: '#f43f5e',
+                    primaryHover: '#e11d48',
+                    bg: '#fff1f2',
+                    white: '#ffffff',
+                    border: '#fecdd3',
+                    text: '#881337',
+                    textLight: '#be123c',
+                    toolbar: '#fff1f2',
+                    activeItem: '#fecdd3'
+                }
+            },
+            {
+                id: 'amber',
+                name: 'Amber Gold',
+                colors: {
+                    primary: '#f59e0b',
+                    primaryHover: '#d97706',
+                    bg: '#fffbeb',
+                    white: '#ffffff',
+                    border: '#fde68a',
+                    text: '#78350f',
+                    textLight: '#b45309',
+                    toolbar: '#fffbeb',
+                    activeItem: '#fef3c7'
+                }
+            },
+            {
+                id: 'cyan',
+                name: 'Ocean Cyan',
+                colors: {
+                    primary: '#06b6d4',
+                    primaryHover: '#0891b2',
+                    bg: '#ecfeff',
+                    white: '#ffffff',
+                    border: '#a5f3fc',
+                    text: '#164e63',
+                    textLight: '#0e7490',
+                    toolbar: '#ecfeff',
+                    activeItem: '#cffafe'
+                }
+            },
+            {
+                id: 'slate',
+                name: 'Slate Gray',
+                colors: {
+                    primary: '#64748b',
+                    primaryHover: '#475569',
+                    bg: '#f8fafc',
+                    white: '#ffffff',
+                    border: '#e2e8f0',
+                    text: '#1e293b',
+                    textLight: '#64748b',
+                    toolbar: '#f1f5f9',
+                    activeItem: '#e2e8f0'
+                }
+            },
+            {
+                id: 'midnight',
+                name: 'Midnight Dark',
+                colors: {
+                    primary: '#6366f1',
+                    primaryHover: '#4f46e5',
+                    bg: '#0f172a',
+                    white: '#1e293b',
+                    border: '#334155',
+                    text: '#f1f5f9',
+                    textLight: '#94a3b8',
+                    toolbar: '#1e293b',
+                    activeItem: '#312e81'
+                }
+            },
+            {
+                id: 'forest',
+                name: 'Forest Night',
+                colors: {
+                    primary: '#22c55e',
+                    primaryHover: '#16a34a',
+                    bg: '#0a1f0a',
+                    white: '#14291a',
+                    border: '#1f3d2a',
+                    text: '#dcfce7',
+                    textLight: '#86efac',
+                    toolbar: '#14291a',
+                    activeItem: '#166534'
+                }
+            },
+            {
+                id: 'sunset',
+                name: 'Sunset Orange',
+                colors: {
+                    primary: '#ea580c',
+                    primaryHover: '#c2410c',
+                    bg: '#fff7ed',
+                    white: '#ffffff',
+                    border: '#fed7aa',
+                    text: '#7c2d12',
+                    textLight: '#c2410c',
+                    toolbar: '#fff7ed',
+                    activeItem: '#ffedd5'
+                }
+            },
+            // 2 New standard themes
+            {
+                id: 'indigo',
+                name: 'Indigo Dream',
+                colors: {
+                    primary: '#4f46e5',
+                    primaryHover: '#4338ca',
+                    bg: '#eef2ff',
+                    white: '#ffffff',
+                    border: '#c7d2fe',
+                    text: '#312e81',
+                    textLight: '#6366f1',
+                    toolbar: '#eef2ff',
+                    activeItem: '#e0e7ff'
+                }
+            },
+            {
+                id: 'teal',
+                name: 'Teal Fresh',
+                colors: {
+                    primary: '#14b8a6',
+                    primaryHover: '#0d9488',
+                    bg: '#f0fdfa',
+                    white: '#ffffff',
+                    border: '#99f6e4',
+                    text: '#134e4a',
+                    textLight: '#0f766e',
+                    toolbar: '#f0fdfa',
+                    activeItem: '#ccfbf1'
+                }
+            },
+            // 3 Creative/funky themes
+            {
+                id: 'synthwave',
+                name: 'Synthwave',
+                colors: {
+                    primary: '#f472b6',
+                    primaryHover: '#ec4899',
+                    bg: '#0c0a1d',
+                    white: '#1a1333',
+                    border: '#7c3aed',
+                    text: '#f0abfc',
+                    textLight: '#c084fc',
+                    toolbar: '#1a1333',
+                    activeItem: '#4c1d95'
+                }
+            },
+            {
+                id: 'bubblegum',
+                name: 'Bubblegum Pop',
+                colors: {
+                    primary: '#e879f9',
+                    primaryHover: '#d946ef',
+                    bg: '#fdf4ff',
+                    white: '#ffffff',
+                    border: '#f0abfc',
+                    text: '#701a75',
+                    textLight: '#a21caf',
+                    toolbar: '#fae8ff',
+                    activeItem: '#f5d0fe'
+                }
+            },
+            {
+                id: 'retrowave',
+                name: 'Retro Neon',
+                colors: {
+                    primary: '#22d3ee',
+                    primaryHover: '#06b6d4',
+                    bg: '#18181b',
+                    white: '#27272a',
+                    border: '#f97316',
+                    text: '#fef08a',
+                    textLight: '#22d3ee',
+                    toolbar: '#27272a',
+                    activeItem: '#365314'
+                }
             }
+        ];
+    }
+
+    initThemes() {
+        // Apply initial state based on themeMode
+        this.applyThemeMode();
+
+        // Bind 3-way toggle
+        this.initThemeModeToggle();
+
+        // Bind theme button in View menu
+        const themeBtn = document.getElementById('themeBtn');
+        if (themeBtn) {
+            themeBtn.addEventListener('click', () => {
+                document.getElementById('viewMenu').classList.remove('show');
+                this.openThemeModal();
+            });
+        }
+
+        // Bind theme modal buttons
+        const themeModalClose = document.getElementById('themeModalClose');
+        const themeCancelBtn = document.getElementById('themeCancelBtn');
+        const themeSaveBtn = document.getElementById('themeSaveBtn');
+
+        if (themeModalClose) {
+            themeModalClose.addEventListener('click', () => this.cancelThemeSelection());
+        }
+        if (themeCancelBtn) {
+            themeCancelBtn.addEventListener('click', () => this.cancelThemeSelection());
+        }
+        if (themeSaveBtn) {
+            themeSaveBtn.addEventListener('click', () => this.saveThemeSelection());
+        }
+
+        // Close modal on backdrop click
+        const themeModal = document.getElementById('themeModal');
+        if (themeModal) {
+            themeModal.addEventListener('click', (e) => {
+                if (e.target === themeModal) {
+                    this.cancelThemeSelection();
+                }
+            });
+        }
+    }
+
+    initThemeModeToggle() {
+        const toggle = document.getElementById('themeModeToggle');
+        if (!toggle) return;
+
+        // Set initial state
+        toggle.setAttribute('data-mode', this.themeMode);
+        this.updateToggleActiveState();
+
+        // Bind click events on icons
+        toggle.querySelectorAll('.toggle-icon').forEach(icon => {
+            icon.addEventListener('click', () => {
+                const mode = icon.dataset.mode;
+                this.setThemeMode(mode);
+            });
         });
     }
 
-    toggleDarkMode(isDark, savePreference = true) {
-        this.darkMode = isDark;
+    updateToggleActiveState() {
+        const toggle = document.getElementById('themeModeToggle');
+        if (!toggle) return;
 
-        if (isDark) {
-            document.documentElement.setAttribute('data-theme', 'dark');
+        toggle.querySelectorAll('.toggle-icon').forEach(icon => {
+            icon.classList.toggle('active', icon.dataset.mode === this.themeMode);
+        });
+    }
+
+    loadThemeMode() {
+        const saved = localStorage.getItem('wysiwyg_theme_mode');
+        return saved || 'theme'; // Default to 'theme' mode (use selected theme)
+    }
+
+    saveThemeMode(mode) {
+        localStorage.setItem('wysiwyg_theme_mode', mode);
+        this.themeMode = mode;
+    }
+
+    setThemeMode(mode) {
+        this.saveThemeMode(mode);
+
+        const toggle = document.getElementById('themeModeToggle');
+        if (toggle) {
+            toggle.setAttribute('data-mode', mode);
+        }
+
+        this.updateToggleActiveState();
+        this.applyThemeMode();
+    }
+
+    applyThemeMode() {
+        if (this.themeMode === 'dark') {
+            // Dark mode overrides everything
+            this.applyDarkModeOverride();
+        } else if (this.themeMode === 'light') {
+            // Light mode - use default light colors
+            this.applyLightMode();
         } else {
-            document.documentElement.removeAttribute('data-theme');
-        }
-
-        if (savePreference) {
-            this.saveThemePreference(isDark);
+            // Theme mode - use selected theme
+            this.applyTheme(this.currentTheme, false);
         }
     }
 
-    loadThemePreference() {
-        const saved = localStorage.getItem('wysiwyg_theme');
-        if (saved !== null) {
-            return saved === 'dark';
-        }
-        // Default to system preference
-        return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    applyDarkModeOverride() {
+        const root = document.documentElement;
+        root.setAttribute('data-theme', 'dark');
+
+        // Apply dark mode CSS variables
+        root.style.setProperty('--primary-color', '#60a5fa');
+        root.style.setProperty('--primary-hover', '#3b82f6');
+        root.style.setProperty('--bg-color', '#111827');
+        root.style.setProperty('--white', '#1f2937');
+        root.style.setProperty('--border-color', '#374151');
+        root.style.setProperty('--text-color', '#f9fafb');
+        root.style.setProperty('--text-light', '#9ca3af');
+        root.style.setProperty('--toolbar-bg', '#1f2937');
+        root.style.setProperty('--active-item-bg', '#1e3a5f');
     }
 
-    saveThemePreference(isDark) {
-        localStorage.setItem('wysiwyg_theme', isDark ? 'dark' : 'light');
+    applyLightMode() {
+        const root = document.documentElement;
+        root.removeAttribute('data-theme');
+
+        // Apply default light mode CSS variables
+        root.style.setProperty('--primary-color', '#3b82f6');
+        root.style.setProperty('--primary-hover', '#2563eb');
+        root.style.setProperty('--bg-color', '#f3f4f6');
+        root.style.setProperty('--white', '#ffffff');
+        root.style.setProperty('--border-color', '#e5e7eb');
+        root.style.setProperty('--text-color', '#1f2937');
+        root.style.setProperty('--text-light', '#6b7280');
+        root.style.setProperty('--toolbar-bg', '#fafafa');
+        root.style.setProperty('--active-item-bg', '#dbeafe');
+    }
+
+    loadCurrentTheme() {
+        const saved = localStorage.getItem('wysiwyg_color_theme');
+        return saved || 'sunset'; // Default to Sunset Orange
+    }
+
+    saveCurrentTheme(themeId) {
+        localStorage.setItem('wysiwyg_color_theme', themeId);
+        this.currentTheme = themeId;
+    }
+
+    openThemeModal() {
+        // Store original theme for cancel
+        this.originalTheme = this.currentTheme;
+        this.previewTheme = this.currentTheme;
+
+        // Render theme cards
+        this.renderThemeCards();
+
+        // Show modal
+        document.getElementById('themeModal').classList.add('show');
+    }
+
+    renderThemeCards() {
+        const grid = document.getElementById('themeGrid');
+        if (!grid) return;
+
+        const themes = this.getThemes();
+        grid.innerHTML = themes.map(theme => `
+            <div class="theme-card ${theme.id === this.previewTheme ? 'selected' : ''}" data-theme-id="${theme.id}">
+                <div class="theme-card-check"><i class="fas fa-check"></i></div>
+                <div class="theme-card-preview" style="background: ${theme.colors.bg}">
+                    <div class="theme-preview-header" style="background: ${theme.colors.white}; border-bottom: 1px solid ${theme.colors.border}">
+                        <span class="theme-preview-dot" style="background: #ef4444"></span>
+                        <span class="theme-preview-dot" style="background: #f59e0b"></span>
+                        <span class="theme-preview-dot" style="background: #22c55e"></span>
+                    </div>
+                    <div class="theme-preview-body">
+                        <div class="theme-preview-sidebar" style="background: ${theme.colors.white}; border: 1px solid ${theme.colors.border}"></div>
+                        <div class="theme-preview-content" style="background: ${theme.colors.white}; border: 1px solid ${theme.colors.border}">
+                            <div class="theme-preview-toolbar" style="background: ${theme.colors.toolbar}; border-bottom: 1px solid ${theme.colors.border}"></div>
+                            <div class="theme-preview-text" style="background: ${theme.colors.primary}; opacity: 0.2"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="theme-card-name">${theme.name}</div>
+            </div>
+        `).join('');
+
+        // Bind click events
+        grid.querySelectorAll('.theme-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const themeId = card.dataset.themeId;
+                this.previewThemeById(themeId);
+
+                // Update selected state
+                grid.querySelectorAll('.theme-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+            });
+        });
+    }
+
+    previewThemeById(themeId) {
+        this.previewTheme = themeId;
+        this.applyTheme(themeId, true);
+    }
+
+    applyTheme(themeId, isPreview = false) {
+        const themes = this.getThemes();
+        const theme = themes.find(t => t.id === themeId);
+        if (!theme) return;
+
+        const root = document.documentElement;
+        const colors = theme.colors;
+
+        // Check if this is a dark theme based on background color brightness
+        const darkThemes = ['midnight', 'forest', 'synthwave', 'retrowave'];
+        const isDarkTheme = darkThemes.includes(themeId);
+
+        // Apply CSS variables
+        root.style.setProperty('--primary-color', colors.primary);
+        root.style.setProperty('--primary-hover', colors.primaryHover);
+        root.style.setProperty('--bg-color', colors.bg);
+        root.style.setProperty('--white', colors.white);
+        root.style.setProperty('--border-color', colors.border);
+        root.style.setProperty('--text-color', colors.text);
+        root.style.setProperty('--text-light', colors.textLight);
+        root.style.setProperty('--toolbar-bg', colors.toolbar);
+        root.style.setProperty('--active-item-bg', colors.activeItem);
+
+        // Handle dark theme attribute for proper styling
+        if (isDarkTheme) {
+            root.setAttribute('data-theme', 'dark');
+        } else {
+            root.removeAttribute('data-theme');
+        }
+    }
+
+    cancelThemeSelection() {
+        // Restore original theme and re-apply current theme mode
+        this.previewTheme = null;
+        this.originalTheme = null;
+
+        // Re-apply the current theme mode (which will use the saved theme)
+        this.applyThemeMode();
+
+        // Close modal
+        document.getElementById('themeModal').classList.remove('show');
+    }
+
+    saveThemeSelection() {
+        // Save the previewed theme
+        if (this.previewTheme) {
+            this.saveCurrentTheme(this.previewTheme);
+            this.currentTheme = this.previewTheme;
+        }
+        this.previewTheme = null;
+        this.originalTheme = null;
+
+        // Switch to theme mode so the newly selected theme is visible
+        this.setThemeMode('theme');
+
+        // Close modal
+        document.getElementById('themeModal').classList.remove('show');
+        this.showNotification('Theme saved!', 'theme');
     }
 
     // ==================== Sidebar ====================
@@ -272,7 +750,7 @@ class WYSIWYGEditor {
         hamburgerBtn.classList.add('hidden');
         this.saveSidebarState();
         this.updateDocBarHighlight();
-        this.showNotification('Document bar hidden.');
+        this.showNotification('Document bar hidden.', 'docBar');
     }
 
     showDocumentBar() {
@@ -305,7 +783,7 @@ class WYSIWYGEditor {
 
         this.saveSidebarState();
         this.updateDocBarHighlight();
-        this.showNotification('Document bar restored.');
+        this.showNotification('Document bar restored.', 'docBar');
     }
 
     loadSidebarState() {
@@ -774,7 +1252,7 @@ class WYSIWYGEditor {
                 this.spellcheckEnabled = e.target.checked;
                 this.editor.setAttribute('spellcheck', this.spellcheckEnabled);
                 this.saveSpellcheckSettings();
-                this.showNotification(`Spell check ${this.spellcheckEnabled ? 'enabled' : 'disabled'}`);
+                this.showNotification(`Spell check ${this.spellcheckEnabled ? 'enabled' : 'disabled'}`, 'spellcheck');
             });
         }
 
@@ -782,7 +1260,7 @@ class WYSIWYGEditor {
             autocorrectToggle.addEventListener('change', (e) => {
                 this.autocorrectEnabled = e.target.checked;
                 this.saveSpellcheckSettings();
-                this.showNotification(`Autocorrect ${this.autocorrectEnabled ? 'enabled' : 'disabled'}`);
+                this.showNotification(`Autocorrect ${this.autocorrectEnabled ? 'enabled' : 'disabled'}`, 'spellcheck');
             });
         }
 
@@ -790,7 +1268,7 @@ class WYSIWYGEditor {
             autocapitalizeToggle.addEventListener('change', (e) => {
                 this.autocapitalizeEnabled = e.target.checked;
                 this.saveSpellcheckSettings();
-                this.showNotification(`Auto-capitalize ${this.autocapitalizeEnabled ? 'enabled' : 'disabled'}`);
+                this.showNotification(`Auto-capitalize ${this.autocapitalizeEnabled ? 'enabled' : 'disabled'}`, 'spellcheck');
             });
         }
     }
@@ -824,7 +1302,7 @@ class WYSIWYGEditor {
                 if (newWord && !this.customDictionary.includes(newWord)) {
                     this.customDictionary.push(newWord);
                     this.saveCustomDictionary();
-                    this.showNotification(`"${newWord}" added to dictionary`);
+                    this.showNotification(`"${newWord}" added to dictionary`, 'spellcheck');
                 }
                 document.getElementById('newWord').value = '';
                 this.closeModal('addWordModal');
@@ -870,7 +1348,7 @@ class WYSIWYGEditor {
             this.renderDictionaryLists();
             fromInput.value = '';
             toInput.value = '';
-            this.showNotification(`Autocorrect rule added: "${from}" → "${to}"`);
+            this.showNotification(`Autocorrect rule added: "${from}" → "${to}"`, 'spellcheck');
         }
     }
 
@@ -897,7 +1375,7 @@ class WYSIWYGEditor {
                         this.customDictionary = this.customDictionary.filter(w => w !== word);
                         this.saveCustomDictionary();
                         this.renderDictionaryLists();
-                        this.showNotification(`"${word}" removed from dictionary`);
+                        this.showNotification(`"${word}" removed from dictionary`, 'spellcheck');
                     });
                 });
             }
@@ -928,7 +1406,7 @@ class WYSIWYGEditor {
                         delete this.autocorrectRules[from];
                         this.saveAutocorrectRules();
                         this.renderDictionaryLists();
-                        this.showNotification(`Autocorrect rule removed`);
+                        this.showNotification(`Autocorrect rule removed`, 'spellcheck');
                     });
                 });
             }
@@ -1343,6 +1821,11 @@ class WYSIWYGEditor {
     // ==================== Header Actions ====================
 
     bindHeaderActions() {
+        // Reset Button
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            this.showResetConfirmation();
+        });
+
         // New Document
         document.getElementById('newDocBtn').addEventListener('click', () => {
             this.newDocument();
@@ -1386,6 +1869,824 @@ class WYSIWYGEditor {
         });
     }
 
+    // ==================== Reset Functionality ====================
+
+    showResetConfirmation() {
+        document.getElementById('resetModal').classList.add('show');
+    }
+
+    closeResetModal() {
+        document.getElementById('resetModal').classList.remove('show');
+    }
+
+    initResetModal() {
+        const resetModal = document.getElementById('resetModal');
+        const resetModalClose = document.getElementById('resetModalClose');
+        const resetCancelBtn = document.getElementById('resetCancelBtn');
+        const resetConfirmBtn = document.getElementById('resetConfirmBtn');
+
+        if (resetModalClose) {
+            resetModalClose.addEventListener('click', () => this.closeResetModal());
+        }
+        if (resetCancelBtn) {
+            resetCancelBtn.addEventListener('click', () => this.closeResetModal());
+        }
+        if (resetConfirmBtn) {
+            resetConfirmBtn.addEventListener('click', () => this.resetAllData());
+        }
+
+        // Close on backdrop click
+        if (resetModal) {
+            resetModal.addEventListener('click', (e) => {
+                if (e.target === resetModal) {
+                    this.closeResetModal();
+                }
+            });
+        }
+    }
+
+    resetAllData() {
+        // Clear all localStorage data for this app
+        const keysToRemove = [
+            'wysiwyg_documents',
+            'wysiwyg_theme_mode',
+            'wysiwyg_color_theme',
+            'wysiwyg_sidebar',
+            'wysiwyg_spellcheck_settings',
+            'wysiwyg_custom_dictionary',
+            'wysiwyg_autocorrect_rules',
+            'wysiwyg_autosave_settings',
+            'wysiwyg_autosave_documents',
+            'wysiwyg_toast_settings',
+            'wysiwyg_theme' // Legacy key
+        ];
+
+        keysToRemove.forEach(key => {
+            localStorage.removeItem(key);
+        });
+
+        // Also clear any other wysiwyg_ prefixed keys that might exist
+        const allKeys = Object.keys(localStorage);
+        allKeys.forEach(key => {
+            if (key.startsWith('wysiwyg_')) {
+                localStorage.removeItem(key);
+            }
+        });
+
+        // Clear sessionStorage as well
+        sessionStorage.clear();
+
+        // Force a hard refresh
+        window.location.reload(true);
+    }
+
+    // ==================== Settings Menu ====================
+
+    initSettingsMenu() {
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsMenu = document.getElementById('settingsMenu');
+        const autoSaveToggleBtn = document.getElementById('autoSaveToggleBtn');
+        const advancedSettingsBtn = document.getElementById('advancedSettingsBtn');
+
+        if (!settingsBtn || !settingsMenu) return;
+
+        // Toggle settings menu
+        settingsBtn.addEventListener('click', () => {
+            settingsMenu.classList.toggle('show');
+        });
+
+        // Close when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!settingsBtn.contains(e.target) && !settingsMenu.contains(e.target)) {
+                settingsMenu.classList.remove('show');
+            }
+        });
+
+        // Auto-save toggle
+        if (autoSaveToggleBtn) {
+            this.updateAutoSaveIndicator();
+            autoSaveToggleBtn.addEventListener('click', () => {
+                this.toggleAutoSave();
+            });
+        }
+
+        // Advanced settings
+        if (advancedSettingsBtn) {
+            advancedSettingsBtn.addEventListener('click', () => {
+                settingsMenu.classList.remove('show');
+                this.openAdvancedSettings();
+            });
+        }
+
+        // Initialize advanced settings modal
+        this.initAdvancedSettingsModal();
+    }
+
+    initAdvancedSettingsModal() {
+        const modal = document.getElementById('advancedSettingsModal');
+        const closeBtn = document.getElementById('advancedSettingsModalClose');
+        const cancelBtn = document.getElementById('advancedSettingsCancelBtn');
+        const saveBtn = document.getElementById('advancedSettingsSaveBtn');
+        const valueInput = document.getElementById('autoSaveValue');
+        const unitSelect = document.getElementById('autoSaveUnit');
+
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this.closeAdvancedSettings());
+        }
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => this.closeAdvancedSettings());
+        }
+        if (saveBtn) {
+            saveBtn.addEventListener('click', () => this.saveAdvancedSettings());
+        }
+
+        // Close on backdrop click
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    this.closeAdvancedSettings();
+                }
+            });
+        }
+
+        // Update hint when values change
+        if (valueInput) {
+            valueInput.addEventListener('input', () => this.updateAutoSaveHint());
+        }
+        if (unitSelect) {
+            unitSelect.addEventListener('change', () => this.updateAutoSaveHint());
+        }
+
+        // Custom number input controls
+        this.initNumberInputControls();
+    }
+
+    initNumberInputControls() {
+        document.querySelectorAll('.num-up').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const input = document.getElementById(btn.dataset.target);
+                if (input) {
+                    const max = parseInt(input.max) || 999;
+                    const current = parseInt(input.value) || 0;
+                    if (current < max) {
+                        input.value = current + 1;
+                        input.dispatchEvent(new Event('input'));
+                    }
+                }
+            });
+        });
+
+        document.querySelectorAll('.num-down').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const input = document.getElementById(btn.dataset.target);
+                if (input) {
+                    const min = parseInt(input.min) || 1;
+                    const current = parseInt(input.value) || 0;
+                    if (current > min) {
+                        input.value = current - 1;
+                        input.dispatchEvent(new Event('input'));
+                    }
+                }
+            });
+        });
+    }
+
+    openAdvancedSettings() {
+        const modal = document.getElementById('advancedSettingsModal');
+        const valueInput = document.getElementById('autoSaveValue');
+        const unitSelect = document.getElementById('autoSaveUnit');
+        const limitInput = document.getElementById('autoSaveLimit');
+        const deleteInput = document.getElementById('autoDeleteDays');
+
+        // Populate current values
+        if (valueInput) valueInput.value = this.autoSaveValue;
+        if (unitSelect) unitSelect.value = this.autoSaveUnit;
+        if (limitInput) limitInput.value = this.autoSaveLimit;
+        if (deleteInput) deleteInput.value = this.autoDeleteDays;
+
+        this.updateAutoSaveHint();
+        modal.classList.add('show');
+    }
+
+    closeAdvancedSettings() {
+        document.getElementById('advancedSettingsModal').classList.remove('show');
+    }
+
+    saveAdvancedSettings() {
+        const valueInput = document.getElementById('autoSaveValue');
+        const unitSelect = document.getElementById('autoSaveUnit');
+        const limitInput = document.getElementById('autoSaveLimit');
+        const deleteInput = document.getElementById('autoDeleteDays');
+
+        const newValue = parseInt(valueInput.value) || 5;
+        const newUnit = unitSelect.value;
+        const newLimit = parseInt(limitInput.value) || 3;
+        const newDeleteDays = parseInt(deleteInput.value) || 7;
+
+        // Validate
+        if (newValue < 1) {
+            valueInput.value = 1;
+            return;
+        }
+        if (newLimit < 1) {
+            limitInput.value = 1;
+            return;
+        }
+        if (newDeleteDays < 1) {
+            deleteInput.value = 1;
+            return;
+        }
+
+        this.autoSaveValue = newValue;
+        this.autoSaveUnit = newUnit;
+        this.autoSaveLimit = newLimit;
+        this.autoDeleteDays = newDeleteDays;
+        this.saveAutoSaveSettings();
+
+        // Apply new limit - remove excess auto-saves
+        while (this.autoSaveDocuments.length > this.autoSaveLimit) {
+            this.autoSaveDocuments.pop();
+        }
+        this.saveAutoSaveDocuments();
+        this.renderAutoSaveDocumentList();
+
+        // Restart auto-save if enabled
+        if (this.autoSaveEnabled) {
+            this.stopAutoSave();
+            this.startAutoSave();
+        }
+
+        this.closeAdvancedSettings();
+        this.showNotification('Settings saved!', 'settings');
+    }
+
+    updateAutoSaveHint() {
+        const hint = document.getElementById('autoSaveHint');
+        const valueInput = document.getElementById('autoSaveValue');
+        const unitSelect = document.getElementById('autoSaveUnit');
+
+        if (!hint || !valueInput || !unitSelect) return;
+
+        const value = valueInput.value || 5;
+        const unit = unitSelect.value;
+
+        const unitLabels = {
+            'minutes': value == 1 ? 'minute' : 'minutes',
+            'seconds': value == 1 ? 'second' : 'seconds',
+            'words': value == 1 ? 'word typed' : 'words typed',
+            'characters': value == 1 ? 'character typed' : 'characters typed',
+            'changes': value == 1 ? 'change made' : 'changes made'
+        };
+
+        hint.textContent = `Document will be saved every ${value} ${unitLabels[unit]}.`;
+    }
+
+    // ==================== Toast Settings ====================
+
+    loadToastSettings() {
+        const saved = localStorage.getItem('wysiwyg_toast_settings');
+        if (saved) {
+            return JSON.parse(saved);
+        }
+        // Default settings - all enabled
+        return {
+            enabled: true,
+            autoSave: true,
+            docSave: true,
+            docDelete: true,
+            theme: true,
+            settings: true,
+            spellcheck: true,
+            docBar: true
+        };
+    }
+
+    saveToastSettings() {
+        localStorage.setItem('wysiwyg_toast_settings', JSON.stringify(this.toastSettings));
+    }
+
+    initToastSettingsModal() {
+        const toastSettingsBtn = document.getElementById('toastSettingsBtn');
+        const modal = document.getElementById('toastSettingsModal');
+        const closeBtn = document.getElementById('toastSettingsModalClose');
+        const cancelBtn = document.getElementById('toastSettingsCancelBtn');
+        const saveBtn = document.getElementById('toastSettingsSaveBtn');
+        const masterToggle = document.getElementById('toastMasterToggle');
+
+        // Open toast settings from advanced settings
+        if (toastSettingsBtn) {
+            toastSettingsBtn.addEventListener('click', () => {
+                this.openToastSettings();
+            });
+        }
+
+        // Close button
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this.closeToastSettings(false));
+        }
+
+        // Cancel button
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => this.closeToastSettings(false));
+        }
+
+        // Save button
+        if (saveBtn) {
+            saveBtn.addEventListener('click', () => this.saveToastSettingsAndClose());
+        }
+
+        // Close on backdrop click
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    this.closeToastSettings(false);
+                }
+            });
+        }
+
+        // Master toggle functionality
+        if (masterToggle) {
+            masterToggle.addEventListener('change', () => {
+                this.updateIndividualToastOptions();
+            });
+        }
+    }
+
+    openToastSettings() {
+        // Store that we came from advanced settings
+        this.previousModal = 'advancedSettingsModal';
+
+        // Close advanced settings modal
+        document.getElementById('advancedSettingsModal').classList.remove('show');
+
+        // Populate current values
+        document.getElementById('toastMasterToggle').checked = this.toastSettings.enabled;
+        document.getElementById('toastAutoSave').checked = this.toastSettings.autoSave;
+        document.getElementById('toastDocSave').checked = this.toastSettings.docSave;
+        document.getElementById('toastDocDelete').checked = this.toastSettings.docDelete;
+        document.getElementById('toastTheme').checked = this.toastSettings.theme;
+        document.getElementById('toastSettings').checked = this.toastSettings.settings;
+        document.getElementById('toastSpellcheck').checked = this.toastSettings.spellcheck;
+        document.getElementById('toastDocBar').checked = this.toastSettings.docBar;
+
+        // Update individual options state
+        this.updateIndividualToastOptions();
+
+        // Open toast settings modal
+        document.getElementById('toastSettingsModal').classList.add('show');
+    }
+
+    updateIndividualToastOptions() {
+        const masterEnabled = document.getElementById('toastMasterToggle').checked;
+        const individualSettings = document.getElementById('toastIndividualSettings');
+
+        if (masterEnabled) {
+            individualSettings.classList.remove('disabled');
+        } else {
+            individualSettings.classList.add('disabled');
+        }
+    }
+
+    closeToastSettings(saveChanges = false) {
+        // Close toast settings modal
+        document.getElementById('toastSettingsModal').classList.remove('show');
+
+        // Re-open the previous modal if there was one
+        if (this.previousModal) {
+            setTimeout(() => {
+                document.getElementById(this.previousModal).classList.add('show');
+                this.previousModal = null;
+            }, 150); // Small delay for smooth transition
+        }
+    }
+
+    saveToastSettingsAndClose() {
+        // Save all toast settings
+        this.toastSettings = {
+            enabled: document.getElementById('toastMasterToggle').checked,
+            autoSave: document.getElementById('toastAutoSave').checked,
+            docSave: document.getElementById('toastDocSave').checked,
+            docDelete: document.getElementById('toastDocDelete').checked,
+            theme: document.getElementById('toastTheme').checked,
+            settings: document.getElementById('toastSettings').checked,
+            spellcheck: document.getElementById('toastSpellcheck').checked,
+            docBar: document.getElementById('toastDocBar').checked
+        };
+
+        this.saveToastSettings();
+
+        // Close and return to previous modal
+        document.getElementById('toastSettingsModal').classList.remove('show');
+
+        if (this.previousModal) {
+            setTimeout(() => {
+                document.getElementById(this.previousModal).classList.add('show');
+                this.previousModal = null;
+            }, 150);
+        }
+
+        // Show confirmation if notifications are enabled
+        if (this.toastSettings.enabled && this.toastSettings.settings) {
+            this.showNotification('Toast settings saved!', 'settings');
+        }
+    }
+
+    // ==================== Auto-Save ====================
+
+    loadAutoSaveSettings() {
+        const saved = localStorage.getItem('wysiwyg_autosave_settings');
+        if (saved) {
+            const settings = JSON.parse(saved);
+            this.autoSaveEnabled = settings.enabled ?? false;
+            this.autoSaveValue = settings.value ?? 5;
+            this.autoSaveUnit = settings.unit ?? 'minutes';
+            this.autoSaveLimit = settings.limit ?? 3;
+            this.autoDeleteDays = settings.autoDeleteDays ?? 7;
+        }
+    }
+
+    saveAutoSaveSettings() {
+        localStorage.setItem('wysiwyg_autosave_settings', JSON.stringify({
+            enabled: this.autoSaveEnabled,
+            value: this.autoSaveValue,
+            unit: this.autoSaveUnit,
+            limit: this.autoSaveLimit,
+            autoDeleteDays: this.autoDeleteDays
+        }));
+    }
+
+    loadAutoSaveDocuments() {
+        const saved = localStorage.getItem('wysiwyg_autosave_documents');
+        return saved ? JSON.parse(saved) : [];
+    }
+
+    saveAutoSaveDocuments() {
+        localStorage.setItem('wysiwyg_autosave_documents', JSON.stringify(this.autoSaveDocuments));
+    }
+
+    initAutoSave() {
+        if (this.autoSaveEnabled) {
+            this.startAutoSave();
+        }
+
+        // Track changes for word/character/change-based auto-save
+        this.editor.addEventListener('input', () => {
+            if (!this.autoSaveEnabled) return;
+
+            if (this.autoSaveUnit === 'words') {
+                const currentWords = this.getWordCount();
+                if (currentWords - this.autoSaveWordCount >= this.autoSaveValue) {
+                    this.autoSaveWordCount = currentWords;
+                    this.performAutoSave();
+                }
+            } else if (this.autoSaveUnit === 'characters') {
+                const currentChars = this.editor.textContent.length;
+                if (currentChars - this.autoSaveCharCount >= this.autoSaveValue) {
+                    this.autoSaveCharCount = currentChars;
+                    this.performAutoSave();
+                }
+            } else if (this.autoSaveUnit === 'changes') {
+                this.autoSaveChangeCount++;
+                if (this.autoSaveChangeCount >= this.autoSaveValue) {
+                    this.autoSaveChangeCount = 0;
+                    this.performAutoSave();
+                }
+            }
+        });
+    }
+
+    toggleAutoSave() {
+        this.autoSaveEnabled = !this.autoSaveEnabled;
+        this.saveAutoSaveSettings();
+        this.updateAutoSaveIndicator();
+
+        if (this.autoSaveEnabled) {
+            this.startAutoSave();
+            this.showNotification('Auto-save enabled', 'settings');
+        } else {
+            this.stopAutoSave();
+            this.showNotification('Auto-save disabled', 'settings');
+        }
+    }
+
+    updateAutoSaveIndicator() {
+        const indicator = document.getElementById('autoSaveIndicator');
+        if (indicator) {
+            indicator.classList.toggle('active', this.autoSaveEnabled);
+        }
+    }
+
+    startAutoSave() {
+        // Reset counters
+        this.autoSaveWordCount = this.getWordCount();
+        this.autoSaveCharCount = this.editor.textContent.length;
+        this.autoSaveChangeCount = 0;
+
+        // For time-based auto-save
+        if (this.autoSaveUnit === 'minutes' || this.autoSaveUnit === 'seconds') {
+            const interval = this.autoSaveUnit === 'minutes'
+                ? this.autoSaveValue * 60 * 1000
+                : this.autoSaveValue * 1000;
+
+            this.autoSaveTimer = setInterval(() => {
+                this.performAutoSave();
+            }, interval);
+        }
+    }
+
+    stopAutoSave() {
+        if (this.autoSaveTimer) {
+            clearInterval(this.autoSaveTimer);
+            this.autoSaveTimer = null;
+        }
+    }
+
+    performAutoSave() {
+        // Only auto-save if there's content
+        const content = this.editor.innerHTML;
+        if (!content || content === '<br>' || content === '<p><br></p>') return;
+
+        const title = document.getElementById('docTitle').value || 'Untitled Document';
+        const now = new Date();
+
+        // Check if an auto-save for this document already exists (by title or if we're editing an auto-save)
+        const existingIndex = this.autoSaveDocuments.findIndex(doc => doc.title === title);
+
+        if (existingIndex !== -1) {
+            // Update existing auto-save
+            this.autoSaveDocuments[existingIndex].content = content;
+            this.autoSaveDocuments[existingIndex].updatedAt = now.toISOString();
+            this.autoSaveDocuments[existingIndex].expiresAt = new Date(now.getTime() + (this.autoDeleteDays * 24 * 60 * 60 * 1000)).toISOString();
+
+            // Move to top of list (most recent)
+            const updated = this.autoSaveDocuments.splice(existingIndex, 1)[0];
+            this.autoSaveDocuments.unshift(updated);
+        } else {
+            // Create new auto-save document
+            const autoSaveDoc = {
+                id: 'autosave_' + Date.now().toString(),
+                title: title,
+                content: content,
+                createdAt: now.toISOString(),
+                updatedAt: now.toISOString(),
+                expiresAt: new Date(now.getTime() + (this.autoDeleteDays * 24 * 60 * 60 * 1000)).toISOString()
+            };
+
+            // Add to beginning of array
+            this.autoSaveDocuments.unshift(autoSaveDoc);
+
+            // Remove oldest if over limit
+            while (this.autoSaveDocuments.length > this.autoSaveLimit) {
+                this.autoSaveDocuments.pop();
+            }
+        }
+
+        this.saveAutoSaveDocuments();
+        this.renderAutoSaveDocumentList();
+        this.showNotification('Auto-saved', 'autoSave');
+    }
+
+    renderAutoSaveDocumentList() {
+        const list = document.getElementById('autoSaveDocList');
+        const countEl = document.getElementById('autoSaveDocCount');
+
+        if (!list) return;
+
+        if (countEl) {
+            countEl.textContent = this.autoSaveDocuments.length;
+        }
+
+        if (this.autoSaveDocuments.length === 0) {
+            list.innerHTML = '<li class="no-docs">No auto-saved documents</li>';
+            return;
+        }
+
+        const now = new Date();
+        const oneDayMs = 24 * 60 * 60 * 1000;
+
+        list.innerHTML = this.autoSaveDocuments.map(doc => {
+            const expiresAt = new Date(doc.expiresAt);
+            const timeUntilExpiry = expiresAt - now;
+            const isExpiringSoon = timeUntilExpiry <= oneDayMs && timeUntilExpiry > 0;
+            // Use updatedAt if available, otherwise createdAt
+            const lastSaved = new Date(doc.updatedAt || doc.createdAt);
+            const timeAgo = this.getTimeAgo(lastSaved);
+
+            return `
+                <li class="${isExpiringSoon ? 'expiring-soon' : ''}" data-id="${doc.id}">
+                    <span class="doc-name">${doc.title}</span>
+                    <span class="doc-time">${timeAgo}</span>
+                    <button class="delete-btn" title="Delete">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </li>
+            `;
+        }).join('');
+
+        // Bind click events
+        list.querySelectorAll('li:not(.no-docs)').forEach(item => {
+            const docId = item.dataset.id;
+
+            item.addEventListener('click', (e) => {
+                if (!e.target.closest('.delete-btn')) {
+                    this.loadAutoSaveDocument(docId);
+                }
+            });
+
+            item.querySelector('.delete-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.deleteAutoSaveDocument(docId);
+            });
+        });
+    }
+
+    getTimeAgo(date) {
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+
+        if (diffMins < 1) return 'Just now';
+        if (diffMins < 60) return `${diffMins}m ago`;
+        if (diffHours < 24) return `${diffHours}h ago`;
+        return `${diffDays}d ago`;
+    }
+
+    loadAutoSaveDocument(docId) {
+        const doc = this.autoSaveDocuments.find(d => d.id === docId);
+        if (!doc) return;
+
+        // Reset expiration time when loaded
+        doc.expiresAt = new Date(Date.now() + (this.autoDeleteDays * 24 * 60 * 60 * 1000)).toISOString();
+        this.saveAutoSaveDocuments();
+
+        this.editor.innerHTML = doc.content;
+        document.getElementById('docTitle').value = doc.title;
+        this.currentDocId = null; // Not a saved document
+        this.updateCounts();
+        this.renderAutoSaveDocumentList();
+
+        // Update active states
+        document.querySelectorAll('.doc-list li').forEach(li => li.classList.remove('active'));
+        document.querySelector(`#autoSaveDocList li[data-id="${docId}"]`)?.classList.add('active');
+    }
+
+    deleteAutoSaveDocument(docId) {
+        this.autoSaveDocuments = this.autoSaveDocuments.filter(d => d.id !== docId);
+        this.saveAutoSaveDocuments();
+        this.renderAutoSaveDocumentList();
+        this.showNotification('Auto-save deleted', 'docDelete');
+    }
+
+    moveAutoSaveToSaved(docId) {
+        const doc = this.autoSaveDocuments.find(d => d.id === docId);
+        if (!doc) return;
+
+        // Create a new saved document from auto-save
+        const savedDoc = {
+            id: Date.now().toString(),
+            title: doc.title,
+            content: doc.content,
+            createdAt: doc.createdAt,
+            updatedAt: new Date().toISOString()
+        };
+
+        this.documents.push(savedDoc);
+        this.saveDocuments();
+
+        // Remove from auto-saves
+        this.autoSaveDocuments = this.autoSaveDocuments.filter(d => d.id !== docId);
+        this.saveAutoSaveDocuments();
+
+        this.renderDocumentList();
+        this.renderAutoSaveDocumentList();
+        this.showNotification('Document saved!', 'docSave');
+    }
+
+    // Auto-save warning modal for expiring documents
+    initAutoSaveWarningModal() {
+        const modal = document.getElementById('autoSaveWarningModal');
+        const closeBtn = document.getElementById('autoSaveWarningClose');
+        const closeBtnFooter = document.getElementById('autoSaveWarningCloseBtn');
+
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this.closeAutoSaveWarningModal());
+        }
+        if (closeBtnFooter) {
+            closeBtnFooter.addEventListener('click', () => this.closeAutoSaveWarningModal());
+        }
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    this.closeAutoSaveWarningModal();
+                }
+            });
+        }
+    }
+
+    closeAutoSaveWarningModal() {
+        document.getElementById('autoSaveWarningModal').classList.remove('show');
+    }
+
+    checkExpiringAutoSaves() {
+        const now = new Date();
+        const oneDayMs = 24 * 60 * 60 * 1000;
+
+        // Find auto-saves expiring within 24 hours
+        const expiringDocs = this.autoSaveDocuments.filter(doc => {
+            const expiresAt = new Date(doc.expiresAt);
+            const timeUntilExpiry = expiresAt - now;
+            return timeUntilExpiry <= oneDayMs && timeUntilExpiry > 0;
+        });
+
+        // Also delete any that have already expired
+        const expiredDocs = this.autoSaveDocuments.filter(doc => {
+            const expiresAt = new Date(doc.expiresAt);
+            return expiresAt <= now;
+        });
+
+        if (expiredDocs.length > 0) {
+            this.autoSaveDocuments = this.autoSaveDocuments.filter(doc => {
+                const expiresAt = new Date(doc.expiresAt);
+                return expiresAt > now;
+            });
+            this.saveAutoSaveDocuments();
+            this.renderAutoSaveDocumentList();
+        }
+
+        // Show warning modal if there are expiring docs
+        if (expiringDocs.length > 0) {
+            this.showExpiringDocsWarning(expiringDocs);
+        }
+    }
+
+    showExpiringDocsWarning(expiringDocs) {
+        const list = document.getElementById('expiringDocsList');
+        if (!list) return;
+
+        list.innerHTML = expiringDocs.map(doc => {
+            const expiresAt = new Date(doc.expiresAt);
+            const hoursLeft = Math.max(0, Math.ceil((expiresAt - new Date()) / 3600000));
+            const createdAt = new Date(doc.createdAt);
+
+            return `
+                <li class="expiring-doc-item" data-id="${doc.id}">
+                    <div class="expiring-doc-info">
+                        <div class="expiring-doc-title">${doc.title}</div>
+                        <div class="expiring-doc-meta">
+                            <span><i class="fas fa-clock"></i> Expires in ${hoursLeft}h</span>
+                            <span><i class="fas fa-calendar"></i> Created ${createdAt.toLocaleDateString()}</span>
+                        </div>
+                    </div>
+                    <div class="expiring-doc-actions">
+                        <button class="btn btn-keep" data-action="keep" data-id="${doc.id}">
+                            <i class="fas fa-save"></i> Keep
+                        </button>
+                        <button class="btn btn-delete-small" data-action="delete" data-id="${doc.id}">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
+                </li>
+            `;
+        }).join('');
+
+        // Bind action buttons
+        list.querySelectorAll('.btn-keep').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const docId = btn.dataset.id;
+                this.moveAutoSaveToSaved(docId);
+                btn.closest('.expiring-doc-item').remove();
+
+                // Close modal if no more items
+                if (list.children.length === 0) {
+                    this.closeAutoSaveWarningModal();
+                }
+            });
+        });
+
+        list.querySelectorAll('.btn-delete-small').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const docId = btn.dataset.id;
+                this.deleteAutoSaveDocument(docId);
+                btn.closest('.expiring-doc-item').remove();
+
+                // Close modal if no more items
+                if (list.children.length === 0) {
+                    this.closeAutoSaveWarningModal();
+                }
+            });
+        });
+
+        document.getElementById('autoSaveWarningModal').classList.add('show');
+    }
+
+    getWordCount() {
+        const text = this.editor.textContent || '';
+        const words = text.trim().split(/\s+/).filter(word => word.length > 0);
+        return words.length;
+    }
+
     // ==================== Document Management ====================
 
     newDocument() {
@@ -1395,6 +2696,11 @@ class WYSIWYGEditor {
         this.editor.focus();
         this.updateCounts();
         this.renderDocumentList();
+
+        // Reset auto-save counters
+        this.autoSaveWordCount = 0;
+        this.autoSaveCharCount = 0;
+        this.autoSaveChangeCount = 0;
     }
 
     saveDocument() {
@@ -1424,7 +2730,7 @@ class WYSIWYGEditor {
 
         this.saveDocuments();
         this.renderDocumentList();
-        this.showNotification('Document saved!');
+        this.showNotification('Document saved!', 'docSave');
     }
 
     loadDocument(docId) {
@@ -1448,7 +2754,7 @@ class WYSIWYGEditor {
             }
 
             this.renderDocumentList();
-            this.showNotification('Document deleted!');
+            this.showNotification('Document deleted!', 'docDelete');
         }
     }
 
@@ -1463,6 +2769,11 @@ class WYSIWYGEditor {
 
     renderDocumentList() {
         const list = document.getElementById('docList');
+        const countEl = document.getElementById('savedDocCount');
+
+        if (countEl) {
+            countEl.textContent = this.documents.length;
+        }
 
         if (this.documents.length === 0) {
             list.innerHTML = '<li class="no-docs">No documents saved yet</li>';
@@ -1641,41 +2952,41 @@ ${content}
 
     // ==================== Notifications ====================
 
-    showNotification(message) {
+    showNotification(message, category = 'general') {
+        // Check if toasts are enabled globally
+        if (!this.toastSettings.enabled) return;
+
+        // Check individual category settings
+        const categoryMap = {
+            'autoSave': this.toastSettings.autoSave,
+            'docSave': this.toastSettings.docSave,
+            'docDelete': this.toastSettings.docDelete,
+            'theme': this.toastSettings.theme,
+            'settings': this.toastSettings.settings,
+            'spellcheck': this.toastSettings.spellcheck,
+            'docBar': this.toastSettings.docBar,
+            'general': true // General always shows if global is enabled
+        };
+
+        if (categoryMap[category] === false) return;
+
         // Create notification element
         const notification = document.createElement('div');
-        notification.style.cssText = `
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: #1f2937;
-            color: white;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 14px;
-            z-index: 2000;
-            animation: slideIn 0.3s ease;
-        `;
+        notification.className = 'toast-notification';
         notification.textContent = message;
-
-        // Add animation styles
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes slideIn {
-                from { transform: translateX(100%); opacity: 0; }
-                to { transform: translateX(0); opacity: 1; }
-            }
-        `;
-        document.head.appendChild(style);
 
         document.body.appendChild(notification);
 
+        // Trigger animation
+        requestAnimationFrame(() => {
+            notification.classList.add('show');
+        });
+
         // Remove after 2 seconds
         setTimeout(() => {
-            notification.style.animation = 'slideIn 0.3s ease reverse';
+            notification.classList.remove('show');
             setTimeout(() => {
                 notification.remove();
-                style.remove();
             }, 300);
         }, 2000);
     }

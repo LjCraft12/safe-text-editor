@@ -17,6 +17,9 @@
                     <input type="text" id="docTitle" class="doc-title" value="Untitled Document" placeholder="Document Title">
                     <span class="subtitle">WYSIWYG Editor</span>
                 </div>
+                <button class="btn btn-reset" id="resetBtn" title="Reset All Data">
+                    <i class="fas fa-undo-alt"></i>
+                </button>
             </div>
             <div class="header-right">
                 <!-- View Menu -->
@@ -28,22 +31,42 @@
                         <button class="dropdown-item" id="showDocBarBtn">
                             <i class="fas fa-columns"></i> Show Document Bar
                         </button>
+                        <button class="dropdown-item" id="themeBtn">
+                            <i class="fas fa-palette"></i> Theme
+                        </button>
                         <div class="dropdown-divider view-settings-divider"></div>
                         <button class="dropdown-item view-settings-btn" id="editViewSettingsBtn">
                             <i class="fas fa-cog"></i> Edit View Settings
                         </button>
                     </div>
                 </div>
-                <!-- Dark Mode Toggle -->
-                <div class="theme-toggle-wrapper">
-                    <input type="checkbox" id="darkModeToggle" class="theme-toggle-input">
-                    <label for="darkModeToggle" class="theme-toggle-label">
-                        <span class="theme-toggle-inner">
-                            <span class="toggle-icon sun"><i class="fas fa-sun"></i></span>
-                            <span class="toggle-icon moon"><i class="fas fa-moon"></i></span>
-                        </span>
-                        <span class="theme-toggle-switch"></span>
-                    </label>
+                <!-- Settings Menu -->
+                <div class="dropdown">
+                    <button class="btn btn-secondary dropdown-toggle" id="settingsBtn">
+                        <i class="fas fa-cog"></i> Settings
+                    </button>
+                    <div class="dropdown-menu" id="settingsMenu">
+                        <div class="dropdown-section-header">File</div>
+                        <button class="dropdown-item toggle-item" id="autoSaveToggleBtn">
+                            <span class="item-content">
+                                <i class="fas fa-save"></i> Auto Save
+                            </span>
+                            <span class="toggle-indicator" id="autoSaveIndicator"></span>
+                        </button>
+                        <div class="dropdown-divider settings-divider"></div>
+                        <button class="dropdown-item settings-btn" id="advancedSettingsBtn">
+                            <i class="fas fa-sliders-h"></i> Advanced Settings
+                        </button>
+                    </div>
+                </div>
+                <!-- Theme Mode Toggle (Light / Theme / Dark) -->
+                <div class="theme-mode-toggle-wrapper">
+                    <div class="theme-mode-toggle" id="themeModeToggle">
+                        <span class="toggle-icon sun" data-mode="light" title="Light Mode"><i class="fas fa-sun"></i></span>
+                        <span class="toggle-icon palette" data-mode="theme" title="Use Theme"><i class="fas fa-palette"></i></span>
+                        <span class="toggle-icon moon" data-mode="dark" title="Dark Mode"><i class="fas fa-moon"></i></span>
+                        <span class="toggle-slider-3way" id="toggleSlider"></span>
+                    </div>
                 </div>
                 <button class="btn btn-secondary" id="newDocBtn">
                     <i class="fas fa-plus"></i> New
@@ -73,12 +96,33 @@
                         <span class="hamburger-line"></span>
                         <span class="hamburger-line"></span>
                     </button>
-                    <h3><i class="fas fa-folder"></i> My Documents</h3>
+                    <h3><i class="fas fa-folder"></i> Documents</h3>
                 </div>
                 <div class="sidebar-content">
-                    <ul class="doc-list" id="docList">
-                        <li class="no-docs">No documents saved yet</li>
-                    </ul>
+                    <!-- Saved Documents Section -->
+                    <div class="doc-section">
+                        <div class="doc-section-header">
+                            <span><i class="fas fa-save"></i> Saved</span>
+                            <span class="doc-count" id="savedDocCount">0</span>
+                        </div>
+                        <ul class="doc-list" id="docList">
+                            <li class="no-docs">No documents saved yet</li>
+                        </ul>
+                    </div>
+
+                    <!-- Divider -->
+                    <div class="doc-section-divider"></div>
+
+                    <!-- Auto-Saved Documents Section -->
+                    <div class="doc-section">
+                        <div class="doc-section-header">
+                            <span><i class="fas fa-clock"></i> Auto-Saved</span>
+                            <span class="doc-count" id="autoSaveDocCount">0</span>
+                        </div>
+                        <ul class="doc-list doc-list-autosave" id="autoSaveDocList">
+                            <li class="no-docs">No auto-saved documents</li>
+                        </ul>
+                    </div>
                 </div>
                 <!-- Resize Handle -->
                 <div class="resize-handle" id="resizeHandle">
@@ -446,6 +490,283 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" data-modal="dictionaryModal">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Theme Modal -->
+    <div class="modal" id="themeModal">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h3><i class="fas fa-palette"></i> Choose Theme</h3>
+                <button class="modal-close" id="themeModalClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="theme-grid" id="themeGrid">
+                    <!-- Themes will be populated by JavaScript -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="themeCancelBtn">Cancel</button>
+                <button class="btn btn-primary" id="themeSaveBtn">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Advanced Settings Modal -->
+    <div class="modal" id="advancedSettingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-sliders-h"></i> Advanced Settings</h3>
+                <button class="modal-close" id="advancedSettingsModalClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-section">
+                    <h4><i class="fas fa-save"></i> Auto Save</h4>
+                    <p class="settings-description">Automatically save your document at regular intervals.</p>
+
+                    <div class="auto-save-config">
+                        <div class="config-row">
+                            <label for="autoSaveValue">Save every</label>
+                            <div class="number-input-wrapper">
+                                <input type="number" id="autoSaveValue" class="config-input" min="1" max="999" value="5">
+                                <div class="number-input-controls">
+                                    <button type="button" class="num-up" data-target="autoSaveValue"><i class="fas fa-chevron-up"></i></button>
+                                    <button type="button" class="num-down" data-target="autoSaveValue"><i class="fas fa-chevron-down"></i></button>
+                                </div>
+                            </div>
+                            <select id="autoSaveUnit" class="config-select">
+                                <option value="minutes">Minutes</option>
+                                <option value="seconds">Seconds</option>
+                                <option value="words">Words typed</option>
+                                <option value="characters">Characters typed</option>
+                                <option value="changes">Changes made</option>
+                            </select>
+                        </div>
+                        <p class="config-hint" id="autoSaveHint">Document will be saved every 5 minutes of editing.</p>
+                    </div>
+                </div>
+
+                <div class="settings-divider-line"></div>
+
+                <div class="settings-section">
+                    <h4><i class="fas fa-archive"></i> Auto-Save Storage</h4>
+                    <p class="settings-description">Manage how many auto-saved documents to keep.</p>
+
+                    <div class="auto-save-config">
+                        <div class="config-row">
+                            <label for="autoSaveLimit">Keep up to</label>
+                            <div class="number-input-wrapper">
+                                <input type="number" id="autoSaveLimit" class="config-input" min="1" max="99" value="3">
+                                <div class="number-input-controls">
+                                    <button type="button" class="num-up" data-target="autoSaveLimit"><i class="fas fa-chevron-up"></i></button>
+                                    <button type="button" class="num-down" data-target="autoSaveLimit"><i class="fas fa-chevron-down"></i></button>
+                                </div>
+                            </div>
+                            <span class="config-label">auto-saved documents</span>
+                        </div>
+                        <p class="config-hint">Oldest auto-saves will be removed when limit is reached.</p>
+                    </div>
+                </div>
+
+                <div class="settings-divider-line"></div>
+
+                <div class="settings-section">
+                    <h4><i class="fas fa-trash-alt"></i> Auto-Delete</h4>
+                    <p class="settings-description">Automatically delete old auto-saved documents.</p>
+
+                    <div class="auto-save-config">
+                        <div class="config-row">
+                            <label for="autoDeleteDays">Delete auto-saves after</label>
+                            <div class="number-input-wrapper">
+                                <input type="number" id="autoDeleteDays" class="config-input" min="1" max="365" value="7">
+                                <div class="number-input-controls">
+                                    <button type="button" class="num-up" data-target="autoDeleteDays"><i class="fas fa-chevron-up"></i></button>
+                                    <button type="button" class="num-down" data-target="autoDeleteDays"><i class="fas fa-chevron-down"></i></button>
+                                </div>
+                            </div>
+                            <span class="config-label">days</span>
+                        </div>
+                        <p class="config-hint">You'll be warned 24 hours before deletion.</p>
+                    </div>
+                </div>
+
+                <div class="settings-divider-line"></div>
+
+                <div class="settings-section">
+                    <h4><i class="fas fa-bell"></i> Notifications</h4>
+                    <p class="settings-description">Configure toast notification preferences.</p>
+
+                    <button class="btn btn-secondary settings-sub-btn" id="toastSettingsBtn">
+                        <i class="fas fa-sliders-h"></i> Toast Settings
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="advancedSettingsCancelBtn">Cancel</button>
+                <button class="btn btn-primary" id="advancedSettingsSaveBtn">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Settings Modal -->
+    <div class="modal" id="toastSettingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-bell"></i> Toast Settings</h3>
+                <button class="modal-close" id="toastSettingsModalClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-section">
+                    <div class="master-toggle">
+                        <div class="master-toggle-info">
+                            <h4><i class="fas fa-bell"></i> Enable Toast Notifications</h4>
+                            <p>Show popup notifications for actions</p>
+                        </div>
+                        <label class="toggle-option">
+                            <input type="checkbox" id="toastMasterToggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="settings-divider-line"></div>
+
+                <div class="settings-section" id="toastIndividualSettings">
+                    <h4>Individual Toast Settings</h4>
+                    <p class="settings-description">Enable or disable specific notifications.</p>
+
+                    <div class="toast-options-list">
+                        <div class="toast-option-item">
+                            <div class="toast-option-info">
+                                <span class="toast-option-label">Auto-save notifications</span>
+                                <span class="toast-option-desc">When document is auto-saved</span>
+                            </div>
+                            <label class="toggle-option">
+                                <input type="checkbox" id="toastAutoSave" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="toast-option-item">
+                            <div class="toast-option-info">
+                                <span class="toast-option-label">Document saved</span>
+                                <span class="toast-option-desc">When document is manually saved</span>
+                            </div>
+                            <label class="toggle-option">
+                                <input type="checkbox" id="toastDocSave" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="toast-option-item">
+                            <div class="toast-option-info">
+                                <span class="toast-option-label">Document deleted</span>
+                                <span class="toast-option-desc">When document is deleted</span>
+                            </div>
+                            <label class="toggle-option">
+                                <input type="checkbox" id="toastDocDelete" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="toast-option-item">
+                            <div class="toast-option-info">
+                                <span class="toast-option-label">Theme changes</span>
+                                <span class="toast-option-desc">When theme is saved</span>
+                            </div>
+                            <label class="toggle-option">
+                                <input type="checkbox" id="toastTheme" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="toast-option-item">
+                            <div class="toast-option-info">
+                                <span class="toast-option-label">Settings changes</span>
+                                <span class="toast-option-desc">When settings are updated</span>
+                            </div>
+                            <label class="toggle-option">
+                                <input type="checkbox" id="toastSettings" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="toast-option-item">
+                            <div class="toast-option-info">
+                                <span class="toast-option-label">Spellcheck & Autocorrect</span>
+                                <span class="toast-option-desc">Toggle and dictionary notifications</span>
+                            </div>
+                            <label class="toggle-option">
+                                <input type="checkbox" id="toastSpellcheck" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="toast-option-item">
+                            <div class="toast-option-info">
+                                <span class="toast-option-label">Document bar visibility</span>
+                                <span class="toast-option-desc">When document bar is hidden/shown</span>
+                            </div>
+                            <label class="toggle-option">
+                                <input type="checkbox" id="toastDocBar" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="toastSettingsCancelBtn">Cancel</button>
+                <button class="btn btn-primary" id="toastSettingsSaveBtn">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auto-Save Deletion Warning Modal -->
+    <div class="modal" id="autoSaveWarningModal">
+        <div class="modal-content modal-lg">
+            <div class="modal-header modal-header-warning">
+                <h3><i class="fas fa-exclamation-triangle"></i> Auto-Saves Expiring Soon</h3>
+                <button class="modal-close" id="autoSaveWarningClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="warning-description">The following auto-saved documents will be automatically deleted within 24 hours:</p>
+                <ul class="expiring-docs-list" id="expiringDocsList">
+                    <!-- Populated by JavaScript -->
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="autoSaveWarningCloseBtn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reset Confirmation Modal -->
+    <div class="modal" id="resetModal">
+        <div class="modal-content">
+            <div class="modal-header modal-header-warning">
+                <h3><i class="fas fa-exclamation-triangle"></i> Reset All Data?</h3>
+                <button class="modal-close" id="resetModalClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="reset-warning-text">This will permanently delete:</p>
+                <ul class="reset-list">
+                    <li><i class="fas fa-file-alt"></i> All saved documents</li>
+                    <li><i class="fas fa-palette"></i> Theme preferences</li>
+                    <li><i class="fas fa-columns"></i> Sidebar settings</li>
+                    <li><i class="fas fa-book"></i> Custom dictionary words</li>
+                    <li><i class="fas fa-spell-check"></i> Autocorrect rules</li>
+                    <li><i class="fas fa-cog"></i> All other settings</li>
+                </ul>
+                <p class="reset-note">The page will refresh and everything will be restored to default.</p>
+                <p class="reset-caution"><i class="fas fa-exclamation-circle"></i> This action cannot be undone!</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="resetCancelBtn">Cancel</button>
+                <button class="btn btn-danger" id="resetConfirmBtn">
+                    <i class="fas fa-undo-alt"></i> Reset Everything
+                </button>
             </div>
         </div>
     </div>
