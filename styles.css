@@ -2598,6 +2598,31 @@ body.editor-closed-state .hamburger-btn.floating {
     color: #22c55e;
 }
 
+.about-repo-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 20px;
+    padding: 10px 20px;
+    background: var(--text-color);
+    color: var(--white);
+    text-decoration: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.about-repo-link:hover {
+    background: var(--primary-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.about-repo-link i {
+    font-size: 18px;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .modal-docs {
