@@ -456,6 +456,105 @@ body {
     transition: gap 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Editor Closed State */
+.main-content.editor-closed {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: calc(100vh - 80px);
+}
+
+.main-content.editor-closed .sidebar,
+.main-content.editor-closed .editor-container {
+    display: none !important;
+}
+
+/* Hide floating hamburger button when editor is closed - multiple selectors for compatibility */
+body.editor-closed-state .hamburger-btn.floating {
+    display: none !important;
+}
+
+.hamburger-btn.editor-hidden {
+    display: none !important;
+}
+
+.editor-closed-message {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: var(--text-light);
+    padding: 60px;
+}
+
+.main-content.editor-closed .editor-closed-message {
+    display: flex;
+}
+
+.editor-closed-message i {
+    font-size: 64px;
+    margin-bottom: 24px;
+    opacity: 0.3;
+}
+
+.editor-closed-message h2 {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: 12px;
+}
+
+.editor-closed-message p {
+    font-size: 16px;
+    margin-bottom: 24px;
+}
+
+.editor-closed-message .btn {
+    padding: 12px 24px;
+    font-size: 16px;
+}
+
+/* Editor Roll-up Animation */
+.editor-container.rolling-up {
+    animation: rollUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes rollUp {
+    from {
+        opacity: 1;
+        transform: scaleY(1);
+        transform-origin: top;
+        max-height: 1000px;
+    }
+    to {
+        opacity: 0;
+        transform: scaleY(0);
+        transform-origin: top;
+        max-height: 0;
+    }
+}
+
+/* Editor Roll-down Animation */
+.editor-container.rolling-down {
+    animation: rollDown 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes rollDown {
+    from {
+        opacity: 0;
+        transform: scaleY(0);
+        transform-origin: top;
+        max-height: 0;
+    }
+    to {
+        opacity: 1;
+        transform: scaleY(1);
+        transform-origin: top;
+        max-height: 1000px;
+    }
+}
+
 /* Sidebar */
 .sidebar {
     --sidebar-width: 260px;

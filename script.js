@@ -71,6 +71,10 @@ class WYSIWYGEditor {
         this.previousModal = null;
         this.modalClickOutside = this.loadModalClickOutside();
 
+        // Default load action and editor state
+        this.defaultLoadAction = this.loadDefaultLoadAction();
+        this.editorClosed = false;
+
         this.init();
     }
 
@@ -86,6 +90,14 @@ class WYSIWYGEditor {
         localStorage.setItem('wysiwyg_modal_click_outside', this.modalClickOutside);
     }
 
+    loadDefaultLoadAction() {
+        return localStorage.getItem('wysiwyg_default_load_action') || 'newDocument';
+    }
+
+    saveDefaultLoadAction() {
+        localStorage.setItem('wysiwyg_default_load_action', this.defaultLoadAction);
+    }
+
     // Handle modal click-outside based on user preference
     handleModalClickOutside(modalId, saveCallback, cancelCallback) {
         if (this.modalClickOutside === 'nothing') {
@@ -99,33 +111,45 @@ class WYSIWYGEditor {
     }
 
     init() {
-        this.initThemes();
-        this.initSidebar();
-        this.initSpellcheckAutocorrect();
-        this.initResetModal();
-        this.initSettingsMenu();
-        this.initAutoSave();
-        this.initAutoSaveWarningModal();
-        this.initToastSettingsModal();
-        this.initFolders();
-        this.initAccordion();
-        this.initEditMenu();
-        this.initDocumentContextMenu();
-        this.bindToolbarButtons();
-        this.bindSelects();
-        this.bindColorPickers();
-        this.bindSpecialButtons();
-        this.bindModals();
-        this.bindHeaderActions();
-        this.bindEditorEvents();
-        this.renderDocumentList();
-        this.renderAutoSaveDocumentList();
-        this.renderFolderList();
-        this.updateCounts();
-        this.updateFlagStatusBar();
+        console.log('WYSIWYGEditor init() started');
+        console.log('defaultLoadAction:', this.defaultLoadAction);
 
-        // Check for expiring auto-saves on load
-        this.checkExpiringAutoSaves();
+        try {
+            this.initThemes();
+            this.initSidebar();
+            this.initSpellcheckAutocorrect();
+            this.initResetModal();
+            this.initSettingsMenu();
+            this.initAutoSave();
+            this.initAutoSaveWarningModal();
+            this.initToastSettingsModal();
+            this.initFolders();
+            this.initAccordion();
+            this.initEditMenu();
+            this.initFileMenu();
+            this.initDocumentContextMenu();
+            this.bindToolbarButtons();
+            this.bindSelects();
+            this.bindColorPickers();
+            this.bindSpecialButtons();
+            this.bindModals();
+            this.bindHeaderActions();
+            this.bindEditorEvents();
+            this.renderDocumentList();
+            this.renderAutoSaveDocumentList();
+            this.renderFolderList();
+            this.updateCounts();
+            this.updateFlagStatusBar();
+        } catch (error) {
+            console.error('Error during initialization:', error);
+        }
+
+        // Handle default load action - MUST run even if there were errors above
+        try {
+            this.handleDefaultLoadAction();
+        } catch (error) {
+            console.error('Error in handleDefaultLoadAction:', error);
+        }
     }
 
     // ==================== Themes ====================
@@ -1894,6 +1918,7 @@ class WYSIWYGEditor {
 
         // New Document
         document.getElementById('newDocBtn').addEventListener('click', () => {
+            this.openEditor();
             this.newDocument();
         });
 
@@ -1992,6 +2017,7 @@ class WYSIWYGEditor {
             'wysiwyg_accordion_state',
             'wysiwyg_flag_border_width',
             'wysiwyg_modal_click_outside',
+            'wysiwyg_default_load_action',
             'wysiwyg_theme' // Legacy key
         ];
 
@@ -2137,6 +2163,7 @@ class WYSIWYGEditor {
         const deleteInput = document.getElementById('autoDeleteDays');
         const flagBorderInput = document.getElementById('flagBorderWidth');
         const modalClickOutsideSelect = document.getElementById('modalClickOutside');
+        const defaultLoadActionSelect = document.getElementById('defaultLoadAction');
 
         // Populate current values
         if (valueInput) valueInput.value = this.autoSaveValue;
@@ -2145,6 +2172,7 @@ class WYSIWYGEditor {
         if (deleteInput) deleteInput.value = this.autoDeleteDays;
         if (flagBorderInput) flagBorderInput.value = this.flagBorderWidth;
         if (modalClickOutsideSelect) modalClickOutsideSelect.value = this.modalClickOutside;
+        if (defaultLoadActionSelect) defaultLoadActionSelect.value = this.defaultLoadAction;
 
         this.updateAutoSaveHint();
         modal.classList.add('show');
@@ -2161,6 +2189,7 @@ class WYSIWYGEditor {
         const deleteInput = document.getElementById('autoDeleteDays');
         const flagBorderInput = document.getElementById('flagBorderWidth');
         const modalClickOutsideSelect = document.getElementById('modalClickOutside');
+        const defaultLoadActionSelect = document.getElementById('defaultLoadAction');
 
         const newValue = parseInt(valueInput.value) || 5;
         const newUnit = unitSelect.value;
@@ -2168,6 +2197,7 @@ class WYSIWYGEditor {
         const newDeleteDays = parseInt(deleteInput.value) || 7;
         const newFlagBorderWidth = parseInt(flagBorderInput.value) || 3;
         const newModalClickOutside = modalClickOutsideSelect.value;
+        const newDefaultLoadAction = defaultLoadActionSelect.value;
 
         // Validate
         if (newValue < 1) {
@@ -2193,9 +2223,11 @@ class WYSIWYGEditor {
         this.autoDeleteDays = newDeleteDays;
         this.flagBorderWidth = newFlagBorderWidth;
         this.modalClickOutside = newModalClickOutside;
+        this.defaultLoadAction = newDefaultLoadAction;
         this.saveAutoSaveSettings();
         this.saveFlagBorderWidth();
         this.saveModalClickOutside();
+        this.saveDefaultLoadAction();
 
         // Apply flag border width immediately
         this.applyFlagToEditor();
@@ -3149,6 +3181,209 @@ class WYSIWYGEditor {
         });
     }
 
+    // ==================== File Menu ====================
+
+    initFileMenu() {
+        const fileMenuBtn = document.getElementById('fileMenuBtn');
+        const fileMenu = document.getElementById('fileMenu');
+
+        // Toggle menu
+        fileMenuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.closeAllDropdowns();
+            fileMenu.classList.toggle('show');
+        });
+
+        // New Document button in menu
+        document.getElementById('newDocMenuBtn').addEventListener('click', () => {
+            fileMenu.classList.remove('show');
+            this.openEditor();
+            this.newDocument();
+        });
+
+        // Save button in menu
+        document.getElementById('saveDocMenuBtn').addEventListener('click', () => {
+            fileMenu.classList.remove('show');
+            this.saveDocument();
+        });
+
+        // Close Editor button
+        document.getElementById('closeEditorBtn').addEventListener('click', () => {
+            fileMenu.classList.remove('show');
+            this.closeEditor();
+        });
+
+        // Open new doc button in closed message
+        document.getElementById('openNewDocBtn').addEventListener('click', () => {
+            this.openEditor();
+            this.newDocument();
+        });
+
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!fileMenuBtn.contains(e.target) && !fileMenu.contains(e.target)) {
+                fileMenu.classList.remove('show');
+            }
+        });
+    }
+
+    closeEditor() {
+        if (this.editorClosed) return;
+
+        const mainContent = document.getElementById('mainContent');
+        const editorContainer = document.querySelector('.editor-container');
+        const sidebar = document.getElementById('sidebar');
+        const hamburgerBtn = document.getElementById('hamburgerBtn');
+
+        // Store sidebar state before closing
+        this.sidebarStateBeforeClose = {
+            collapsed: sidebar.classList.contains('collapsed'),
+            width: sidebar.style.width || getComputedStyle(sidebar).width
+        };
+
+        // Animate editor roll-up
+        editorContainer.classList.add('rolling-up');
+
+        // Collapse sidebar
+        if (!sidebar.classList.contains('collapsed')) {
+            sidebar.classList.add('collapsed');
+        }
+
+        // Hide floating hamburger button
+        if (hamburgerBtn) {
+            hamburgerBtn.classList.remove('floating');
+            hamburgerBtn.classList.add('editor-hidden');
+            hamburgerBtn.style.display = 'none';
+        }
+
+        // After animation, hide everything
+        setTimeout(() => {
+            editorContainer.classList.remove('rolling-up');
+            mainContent.classList.add('editor-closed');
+            document.body.classList.add('editor-closed-state');
+            this.editorClosed = true;
+        }, 400);
+    }
+
+    openEditor() {
+        if (!this.editorClosed) return;
+
+        const mainContent = document.getElementById('mainContent');
+        const editorContainer = document.querySelector('.editor-container');
+        const sidebar = document.getElementById('sidebar');
+
+        // Show elements first
+        mainContent.classList.remove('editor-closed');
+        document.body.classList.remove('editor-closed-state');
+
+        // Restore hamburger button
+        const hamburgerBtn = document.getElementById('hamburgerBtn');
+        if (hamburgerBtn) {
+            hamburgerBtn.classList.remove('editor-hidden');
+            hamburgerBtn.style.display = '';
+        }
+
+        // Restore sidebar state - use saved state or localStorage state
+        const shouldRestore = this.sidebarStateBeforeClose
+            ? !this.sidebarStateBeforeClose.collapsed
+            : !this.sidebarCollapsed;
+
+        const widthToRestore = this.sidebarStateBeforeClose
+            ? this.sidebarStateBeforeClose.width
+            : this.sidebarWidth + 'px';
+
+        if (shouldRestore) {
+            sidebar.classList.remove('collapsed');
+            sidebar.style.width = typeof widthToRestore === 'number' ? widthToRestore + 'px' : widthToRestore;
+        }
+
+        // Animate editor roll-down
+        editorContainer.classList.add('rolling-down');
+
+        setTimeout(() => {
+            editorContainer.classList.remove('rolling-down');
+            this.editorClosed = false;
+        }, 400);
+    }
+
+    handleDefaultLoadAction() {
+        console.log('handleDefaultLoadAction called with action:', this.defaultLoadAction);
+        const action = this.defaultLoadAction || 'newDocument';
+
+        switch (action) {
+            case 'newDocument': {
+                // Default behavior - new document already loaded
+                break;
+            }
+
+            case 'lastSaved': {
+                // Load the most recent saved document (excluding those in folders)
+                const visibleDocs = this.documents.filter(doc => !this.isDocInFolder(doc.id, 'saved'));
+                if (visibleDocs.length > 0) {
+                    const sortedDocs = [...visibleDocs].sort((a, b) =>
+                        new Date(b.updatedAt) - new Date(a.updatedAt)
+                    );
+                    this.loadDocument(sortedDocs[0].id);
+                }
+                break;
+            }
+
+            case 'lastAutosave': {
+                // Load the most recent autosave (excluding those in folders)
+                const visibleAutoSaves = this.autoSaveDocuments.filter(doc => !this.isDocInFolder(doc.id, 'autosave'));
+                if (visibleAutoSaves.length > 0) {
+                    // Auto-saves are already sorted by most recent first
+                    this.loadAutoSaveDocument(visibleAutoSaves[0].id);
+                }
+                break;
+            }
+
+            case 'showWarnings': {
+                // Check for expiring auto-saves
+                this.checkExpiringAutoSaves();
+                break;
+            }
+
+            case 'doNothing': {
+                // Close the editor immediately without animation on page load
+                this.closeEditorImmediate();
+                break;
+            }
+
+            default: {
+                // Fallback to new document
+                break;
+            }
+        }
+    }
+
+    // Close editor immediately without animation (for page load)
+    closeEditorImmediate() {
+        const mainContent = document.getElementById('mainContent');
+        const sidebar = document.getElementById('sidebar');
+        const hamburgerBtn = document.getElementById('hamburgerBtn');
+
+        // Store sidebar state before closing (use loaded state from localStorage)
+        this.sidebarStateBeforeClose = {
+            collapsed: this.sidebarCollapsed,
+            width: this.sidebarWidth
+        };
+
+        // Hide everything immediately
+        mainContent.classList.add('editor-closed');
+        document.body.classList.add('editor-closed-state');
+        sidebar.classList.add('collapsed');
+
+        // Also hide the floating hamburger button if it exists
+        if (hamburgerBtn) {
+            hamburgerBtn.classList.remove('floating');
+            hamburgerBtn.classList.add('editor-hidden');
+            hamburgerBtn.style.display = 'none';
+        }
+
+        this.editorClosed = true;
+    }
+
     loadFlagBorderWidth() {
         const saved = localStorage.getItem('wysiwyg_flag_border_width');
         return saved ? parseInt(saved) : 3;
@@ -3491,6 +3726,11 @@ class WYSIWYGEditor {
         const doc = this.autoSaveDocuments.find(d => d.id === docId);
         if (!doc) return;
 
+        // Open editor if closed
+        if (this.editorClosed) {
+            this.openEditor();
+        }
+
         // Reset expiration time when loaded
         doc.expiresAt = new Date(Date.now() + (this.autoDeleteDays * 24 * 60 * 60 * 1000)).toISOString();
         this.saveAutoSaveDocuments();
@@ -3502,6 +3742,12 @@ class WYSIWYGEditor {
         // Track that we're editing this auto-save
         this.currentAutoSaveId = docId;
         this.sessionDocId = null;
+
+        // Load flag from autosave
+        this.currentFlag = doc.flag || 'none';
+        this.applyFlagToEditor();
+        this.updateFlagMenuState();
+        this.updateFlagStatusBar();
 
         this.updateCounts();
         this.renderAutoSaveDocumentList();
@@ -3688,6 +3934,7 @@ class WYSIWYGEditor {
         this.currentFlag = 'none';
         this.applyFlagToEditor();
         this.updateFlagMenuState();
+        this.updateFlagStatusBar();
 
         // Reset auto-save session tracking for new document
         this.currentAutoSaveId = null;
@@ -3732,6 +3979,11 @@ class WYSIWYGEditor {
     loadDocument(docId) {
         const doc = this.documents.find(d => d.id === docId);
         if (doc) {
+            // Open editor if closed
+            if (this.editorClosed) {
+                this.openEditor();
+            }
+
             this.editor.innerHTML = doc.content;
             document.getElementById('docTitle').value = doc.title;
             this.currentDocId = doc.id;
@@ -3744,6 +3996,7 @@ class WYSIWYGEditor {
             this.currentFlag = doc.flag || 'none';
             this.applyFlagToEditor();
             this.updateFlagMenuState();
+            this.updateFlagStatusBar();
 
             this.updateCounts();
             this.renderDocumentList();
@@ -4020,5 +4273,11 @@ ${content}
 
 // Initialize the editor when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    window.editor = new WYSIWYGEditor();
+    console.log('DOMContentLoaded - Creating WYSIWYGEditor');
+    try {
+        window.editor = new WYSIWYGEditor();
+        console.log('WYSIWYGEditor created successfully');
+    } catch (error) {
+        console.error('Error creating WYSIWYGEditor:', error);
+    }
 });

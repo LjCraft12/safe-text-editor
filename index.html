@@ -22,6 +22,25 @@
                 </button>
             </div>
             <div class="header-right">
+                <!-- File Menu -->
+                <div class="dropdown">
+                    <button class="btn btn-secondary dropdown-toggle" id="fileMenuBtn">
+                        <i class="fas fa-file"></i> File
+                    </button>
+                    <div class="dropdown-menu" id="fileMenu">
+                        <button class="dropdown-item" id="newDocMenuBtn">
+                            <i class="fas fa-plus"></i> New Document
+                        </button>
+                        <button class="dropdown-item" id="saveDocMenuBtn">
+                            <i class="fas fa-save"></i> Save
+                            <span class="shortcut">Ctrl+S</span>
+                        </button>
+                        <div class="dropdown-divider"></div>
+                        <button class="dropdown-item" id="closeEditorBtn">
+                            <i class="fas fa-times-circle"></i> Close Editor
+                        </button>
+                    </div>
+                </div>
                 <!-- Edit Menu -->
                 <div class="dropdown">
                     <button class="btn btn-secondary dropdown-toggle" id="editMenuBtn">
@@ -126,7 +145,17 @@
             </div>
         </header>
 
-        <div class="main-content">
+        <div class="main-content" id="mainContent">
+            <!-- Editor Closed Message -->
+            <div class="editor-closed-message" id="editorClosedMessage">
+                <i class="fas fa-file-alt"></i>
+                <h2>No Document Open</h2>
+                <p>Create a new document or open an existing one to start editing.</p>
+                <button class="btn btn-primary" id="openNewDocBtn">
+                    <i class="fas fa-plus"></i> New Document
+                </button>
+            </div>
+
             <!-- Sidebar -->
             <aside class="sidebar" id="sidebar">
                 <div class="sidebar-header">
@@ -595,6 +624,25 @@
                 <div class="settings-group">
                     <div class="settings-group-header">
                         <i class="fas fa-file-alt"></i> File Settings
+                    </div>
+
+                    <div class="settings-section">
+                        <h4><i class="fas fa-rocket"></i> Default Load Action</h4>
+                        <p class="settings-description">What happens when the app starts.</p>
+
+                        <div class="auto-save-config">
+                            <div class="config-row">
+                                <label for="defaultLoadAction">On startup</label>
+                                <select id="defaultLoadAction" class="config-select config-select-wide">
+                                    <option value="newDocument">Load New Document</option>
+                                    <option value="lastSaved">Load Last Saved Document</option>
+                                    <option value="lastAutosave">Load Last Autosave</option>
+                                    <option value="showWarnings">Show Warnings</option>
+                                    <option value="doNothing">Do Nothing</option>
+                                </select>
+                            </div>
+                            <p class="config-hint">Choose what to display when the editor first loads.</p>
+                        </div>
                     </div>
 
                     <div class="settings-section">
