@@ -156,6 +156,7 @@ class WYSIWYGEditor {
             {
                 id: 'default',
                 name: 'Default Blue',
+                description: 'A clean, professional blue theme perfect for everyday use. Features calming blue accents on a light gray background.',
                 colors: {
                     primary: '#3b82f6',
                     primaryHover: '#2563eb',
@@ -171,6 +172,7 @@ class WYSIWYGEditor {
             {
                 id: 'emerald',
                 name: 'Emerald Green',
+                description: 'A refreshing nature-inspired theme with lush green tones. Great for reducing eye strain during long writing sessions.',
                 colors: {
                     primary: '#10b981',
                     primaryHover: '#059669',
@@ -186,6 +188,7 @@ class WYSIWYGEditor {
             {
                 id: 'purple',
                 name: 'Royal Purple',
+                description: 'An elegant and creative theme featuring rich purple tones. Perfect for artistic and imaginative work.',
                 colors: {
                     primary: '#8b5cf6',
                     primaryHover: '#7c3aed',
@@ -201,6 +204,7 @@ class WYSIWYGEditor {
             {
                 id: 'rose',
                 name: 'Rose Pink',
+                description: 'A warm, romantic theme with soft pink hues. Ideal for creative writing and personal journals.',
                 colors: {
                     primary: '#f43f5e',
                     primaryHover: '#e11d48',
@@ -216,6 +220,7 @@ class WYSIWYGEditor {
             {
                 id: 'amber',
                 name: 'Amber Gold',
+                description: 'A warm, inviting theme with golden amber tones. Perfect for cozy, focused writing sessions.',
                 colors: {
                     primary: '#f59e0b',
                     primaryHover: '#d97706',
@@ -231,6 +236,7 @@ class WYSIWYGEditor {
             {
                 id: 'cyan',
                 name: 'Ocean Cyan',
+                description: 'A fresh, aquatic theme inspired by tropical waters. Creates a calm, focused environment.',
                 colors: {
                     primary: '#06b6d4',
                     primaryHover: '#0891b2',
@@ -246,6 +252,7 @@ class WYSIWYGEditor {
             {
                 id: 'slate',
                 name: 'Slate Gray',
+                description: 'A neutral, professional theme with sophisticated gray tones. Minimal and distraction-free.',
                 colors: {
                     primary: '#64748b',
                     primaryHover: '#475569',
@@ -261,6 +268,7 @@ class WYSIWYGEditor {
             {
                 id: 'midnight',
                 name: 'Midnight Dark',
+                description: 'A sleek dark theme with deep blue undertones. Easy on the eyes for nighttime writing.',
                 colors: {
                     primary: '#6366f1',
                     primaryHover: '#4f46e5',
@@ -276,6 +284,7 @@ class WYSIWYGEditor {
             {
                 id: 'forest',
                 name: 'Forest Night',
+                description: 'A dark theme inspired by moonlit forests. Deep greens create a peaceful writing atmosphere.',
                 colors: {
                     primary: '#22c55e',
                     primaryHover: '#16a34a',
@@ -291,6 +300,7 @@ class WYSIWYGEditor {
             {
                 id: 'sunset',
                 name: 'Sunset Orange',
+                description: 'A warm, energizing theme with vibrant orange accents. Perfect for creative and energetic work.',
                 colors: {
                     primary: '#ea580c',
                     primaryHover: '#c2410c',
@@ -307,6 +317,7 @@ class WYSIWYGEditor {
             {
                 id: 'indigo',
                 name: 'Indigo Dream',
+                description: 'A deep, dreamy indigo theme. Rich blue-violet tones inspire creativity and focus.',
                 colors: {
                     primary: '#4f46e5',
                     primaryHover: '#4338ca',
@@ -322,6 +333,7 @@ class WYSIWYGEditor {
             {
                 id: 'teal',
                 name: 'Teal Fresh',
+                description: 'A crisp, modern theme with refreshing teal accents. Clean and contemporary feel.',
                 colors: {
                     primary: '#14b8a6',
                     primaryHover: '#0d9488',
@@ -338,6 +350,7 @@ class WYSIWYGEditor {
             {
                 id: 'synthwave',
                 name: 'Synthwave',
+                description: 'An 80s retro-futuristic dark theme. Neon pinks and purples on deep space backgrounds.',
                 colors: {
                     primary: '#f472b6',
                     primaryHover: '#ec4899',
@@ -353,6 +366,7 @@ class WYSIWYGEditor {
             {
                 id: 'bubblegum',
                 name: 'Bubblegum Pop',
+                description: 'A fun, playful theme with sweet pink and purple tones. Light and cheerful vibes.',
                 colors: {
                     primary: '#e879f9',
                     primaryHover: '#d946ef',
@@ -368,6 +382,7 @@ class WYSIWYGEditor {
             {
                 id: 'retrowave',
                 name: 'Retro Neon',
+                description: 'A bold retro theme with electric cyan and orange neon on dark backgrounds. High contrast.',
                 colors: {
                     primary: '#22d3ee',
                     primaryHover: '#06b6d4',
@@ -378,6 +393,175 @@ class WYSIWYGEditor {
                     textLight: '#22d3ee',
                     toolbar: '#27272a',
                     activeItem: '#365314'
+                }
+            }
+        ];
+    }
+
+    getAnimatedThemes() {
+        return [
+            {
+                id: 'aurora',
+                name: 'Aurora Borealis',
+                description: 'Inspired by the northern lights. Deep purples and pinks dance across a midnight sky.',
+                animated: true,
+                cssClass: 'theme-aurora',
+                animationDescription: 'Shifting aurora curtains with glowing sidebar pulses',
+                colors: {
+                    primary: '#8b5cf6',
+                    primaryHover: '#7c3aed',
+                    bg: '#0f0c29',
+                    white: '#1a1744',
+                    border: '#4c1d95',
+                    text: '#e9d5ff',
+                    textLight: '#c4b5fd',
+                    toolbar: '#1a1744',
+                    activeItem: '#4c1d95'
+                },
+                animation: {
+                    type: 'gradient-shift',
+                    duration: '8s',
+                    colors: ['#0f0c29', '#302b63', '#24243e']
+                }
+            },
+            {
+                id: 'ocean-wave',
+                name: 'Ocean Wave',
+                description: 'Dive into calm ocean depths. Soothing blues from deep sea to surface light.',
+                animated: true,
+                cssClass: 'theme-ocean',
+                animationDescription: 'Gentle rolling waves with underwater light effects',
+                colors: {
+                    primary: '#0ea5e9',
+                    primaryHover: '#0284c7',
+                    bg: '#0c4a6e',
+                    white: '#075985',
+                    border: '#0369a1',
+                    text: '#e0f2fe',
+                    textLight: '#7dd3fc',
+                    toolbar: '#075985',
+                    activeItem: '#0369a1'
+                },
+                animation: {
+                    type: 'wave',
+                    duration: '3s'
+                }
+            },
+            {
+                id: 'sunset-glow',
+                name: 'Sunset Glow',
+                description: 'A warm evening sky with rich oranges and deep shadows. Cozy and atmospheric.',
+                animated: true,
+                cssClass: 'theme-sunset-glow',
+                animationDescription: 'Pulsing sunset glow with horizon light effects',
+                colors: {
+                    primary: '#f97316',
+                    primaryHover: '#ea580c',
+                    bg: '#1c1917',
+                    white: '#292524',
+                    border: '#78350f',
+                    text: '#fed7aa',
+                    textLight: '#fdba74',
+                    toolbar: '#292524',
+                    activeItem: '#7c2d12'
+                },
+                animation: {
+                    type: 'glow',
+                    duration: '6s',
+                    colors: ['#ff6b6b', '#feca57', '#ff9ff3', '#54a0ff']
+                }
+            },
+            {
+                id: 'neon-pulse',
+                name: 'Neon Pulse',
+                description: 'Cyberpunk-inspired with electric neon greens and cyans on pure black.',
+                animated: true,
+                cssClass: 'theme-neon',
+                animationDescription: 'Pulsing neon glow with flowing RGB toolbar',
+                colors: {
+                    primary: '#00ff88',
+                    primaryHover: '#00cc6a',
+                    bg: '#0a0a0a',
+                    white: '#1a1a2e',
+                    border: '#00ff88',
+                    text: '#00ff88',
+                    textLight: '#00d4ff',
+                    toolbar: '#1a1a2e',
+                    activeItem: '#002211'
+                },
+                animation: {
+                    type: 'pulse',
+                    duration: '2s'
+                }
+            },
+            {
+                id: 'enchanted-forest',
+                name: 'Enchanted Forest',
+                description: 'A magical woodland at twilight. Soft sunbeams filter through emerald leaves.',
+                animated: true,
+                cssClass: 'theme-forest',
+                animationDescription: 'Dappled sunlight and mystical forest mist',
+                colors: {
+                    primary: '#22c55e',
+                    primaryHover: '#16a34a',
+                    bg: '#0f1f0f',
+                    white: '#1a2e1a',
+                    border: '#166534',
+                    text: '#bbf7d0',
+                    textLight: '#86efac',
+                    toolbar: '#1a2e1a',
+                    activeItem: '#14532d'
+                },
+                animation: {
+                    type: 'light-filter',
+                    duration: '5s'
+                }
+            },
+            {
+                id: 'galaxy',
+                name: 'Galaxy Spiral',
+                description: 'Travel through space with twinkling stars and distant nebulae. Infinite and inspiring.',
+                animated: true,
+                cssClass: 'theme-galaxy',
+                animationDescription: 'Twinkling stars with swirling nebula clouds',
+                colors: {
+                    primary: '#a855f7',
+                    primaryHover: '#9333ea',
+                    bg: '#0d0d1a',
+                    white: '#1a1a3e',
+                    border: '#581c87',
+                    text: '#e9d5ff',
+                    textLight: '#c084fc',
+                    toolbar: '#1a1a3e',
+                    activeItem: '#3b0764'
+                },
+                animation: {
+                    type: 'rotate',
+                    duration: '20s'
+                }
+            },
+            {
+                id: 'candy',
+                name: 'Candy Swirl',
+                description: 'Sweet and playful with cotton candy pinks. Light, fun, and whimsical.',
+                animated: true,
+                cssClass: 'theme-candy',
+                animationDescription: 'Swirling candy colors with floating bubble effects',
+                colors: {
+                    primary: '#ec4899',
+                    primaryHover: '#db2777',
+                    bg: '#fdf2f8',
+                    white: '#ffffff',
+                    border: '#f9a8d4',
+                    text: '#831843',
+                    textLight: '#be185d',
+                    toolbar: '#fce7f3',
+                    activeItem: '#fbcfe8'
+                },
+                animation: {
+                    type: 'swirl',
+                    duration: '4s',
+                    colors: ['#ff6b9d', '#c44569', '#f8b500']
                 }
             }
         ];
@@ -537,11 +721,35 @@ class WYSIWYGEditor {
         this.originalTheme = this.currentTheme;
         this.previewTheme = this.currentTheme;
 
-        // Render theme cards
+        // Render theme cards for both tabs
         this.renderThemeCards();
+        this.renderAnimatedThemeCards();
+
+        // Initialize tab behavior
+        this.initThemeTabs();
 
         // Show modal
         document.getElementById('themeModal').classList.add('show');
+    }
+
+    initThemeTabs() {
+        const tabs = document.querySelectorAll('.theme-tab');
+        const contents = document.querySelectorAll('.theme-tab-content');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const targetTab = tab.dataset.tab;
+
+                // Update active tab
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+
+                // Update active content
+                contents.forEach(c => {
+                    c.classList.toggle('active', c.id === `${targetTab}Themes`);
+                });
+            });
+        });
     }
 
     renderThemeCards() {
@@ -571,16 +779,153 @@ class WYSIWYGEditor {
         `).join('');
 
         // Bind click events
+        this.bindThemeCardClicks(grid);
+    }
+
+    renderAnimatedThemeCards() {
+        const grid = document.getElementById('animatedThemeGrid');
+        if (!grid) return;
+
+        const themes = this.getAnimatedThemes();
+        grid.innerHTML = themes.map(theme => `
+            <div class="theme-card animated ${theme.id === this.previewTheme ? 'selected' : ''}" data-theme-id="${theme.id}" data-animated="true">
+                <div class="theme-card-check"><i class="fas fa-check"></i></div>
+                <div class="theme-card-preview ${theme.cssClass}" style="background: ${theme.colors.bg}">
+                    <div class="theme-preview-header" style="background: ${theme.colors.white}; border-bottom: 1px solid ${theme.colors.border}">
+                        <span class="theme-preview-dot" style="background: #ef4444"></span>
+                        <span class="theme-preview-dot" style="background: #f59e0b"></span>
+                        <span class="theme-preview-dot" style="background: #22c55e"></span>
+                    </div>
+                    <div class="theme-preview-body">
+                        <div class="theme-preview-sidebar" style="background: ${theme.colors.white}; border: 1px solid ${theme.colors.border}"></div>
+                        <div class="theme-preview-content" style="background: ${theme.colors.white}; border: 1px solid ${theme.colors.border}">
+                            <div class="theme-preview-toolbar" style="background: ${theme.colors.toolbar}; border-bottom: 1px solid ${theme.colors.border}"></div>
+                            <div class="theme-preview-text" style="background: ${theme.colors.primary}; opacity: 0.2"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="theme-card-name"><i class="fas fa-sparkles"></i> ${theme.name}</div>
+            </div>
+        `).join('');
+
+        // Bind click events
+        this.bindThemeCardClicks(grid);
+    }
+
+    bindThemeCardClicks(grid) {
         grid.querySelectorAll('.theme-card').forEach(card => {
+            let tooltipTimer = null;
+
             card.addEventListener('click', () => {
                 const themeId = card.dataset.themeId;
                 this.previewThemeById(themeId);
 
-                // Update selected state
-                grid.querySelectorAll('.theme-card').forEach(c => c.classList.remove('selected'));
+                // Update selected state across all grids
+                document.querySelectorAll('.theme-card').forEach(c => c.classList.remove('selected'));
                 card.classList.add('selected');
+
+                // Hide tooltip on click
+                this.hideThemeTooltip();
+            });
+
+            // Show tooltip after 2 seconds of hovering
+            card.addEventListener('mouseenter', (e) => {
+                tooltipTimer = setTimeout(() => {
+                    const themeId = card.dataset.themeId;
+                    this.showThemeTooltip(themeId, e);
+                }, 2000);
+            });
+
+            // Update tooltip position on mouse move
+            card.addEventListener('mousemove', (e) => {
+                const tooltip = document.getElementById('themeTooltip');
+                if (tooltip && tooltip.classList.contains('show')) {
+                    this.positionThemeTooltip(e);
+                }
+            });
+
+            // Hide tooltip and cancel timer on mouse leave
+            card.addEventListener('mouseleave', () => {
+                if (tooltipTimer) {
+                    clearTimeout(tooltipTimer);
+                    tooltipTimer = null;
+                }
+                this.hideThemeTooltip();
             });
         });
+    }
+
+    showThemeTooltip(themeId, event) {
+        // Get theme data from either basic or animated themes
+        let theme = this.getThemes().find(t => t.id === themeId);
+        if (!theme) {
+            theme = this.getAnimatedThemes().find(t => t.id === themeId);
+        }
+        if (!theme) return;
+
+        const tooltip = document.getElementById('themeTooltip');
+        const nameEl = document.getElementById('tooltipThemeName');
+        const colorsEl = document.getElementById('tooltipColors');
+        const descEl = document.getElementById('tooltipDescription');
+        const animEl = document.getElementById('tooltipAnimation');
+        const animTextEl = document.getElementById('tooltipAnimationText');
+
+        // Set theme name
+        nameEl.textContent = theme.name;
+
+        // Set color swatches
+        const colors = theme.colors;
+        colorsEl.innerHTML = `
+            <div class="theme-tooltip-color" style="background: ${colors.primary}" title="Primary"></div>
+            <div class="theme-tooltip-color" style="background: ${colors.bg}" title="Background"></div>
+            <div class="theme-tooltip-color" style="background: ${colors.white}" title="Surface"></div>
+            <div class="theme-tooltip-color" style="background: ${colors.text}" title="Text"></div>
+            <div class="theme-tooltip-color" style="background: ${colors.border}" title="Border"></div>
+        `;
+
+        // Set description
+        descEl.textContent = theme.description || 'A beautiful theme for your editor.';
+
+        // Set animation info if applicable
+        if (theme.animated && theme.animationDescription) {
+            animEl.style.display = 'flex';
+            animTextEl.textContent = theme.animationDescription;
+        } else {
+            animEl.style.display = 'none';
+        }
+
+        // Position and show tooltip
+        this.positionThemeTooltip(event);
+        tooltip.classList.add('show');
+    }
+
+    positionThemeTooltip(event) {
+        const tooltip = document.getElementById('themeTooltip');
+        const padding = 15;
+
+        let x = event.clientX + padding;
+        let y = event.clientY + padding;
+
+        // Get tooltip dimensions
+        const tooltipRect = tooltip.getBoundingClientRect();
+
+        // Adjust if tooltip would go off screen
+        if (x + tooltipRect.width > window.innerWidth) {
+            x = event.clientX - tooltipRect.width - padding;
+        }
+        if (y + tooltipRect.height > window.innerHeight) {
+            y = event.clientY - tooltipRect.height - padding;
+        }
+
+        tooltip.style.left = `${x}px`;
+        tooltip.style.top = `${y}px`;
+    }
+
+    hideThemeTooltip() {
+        const tooltip = document.getElementById('themeTooltip');
+        if (tooltip) {
+            tooltip.classList.remove('show');
+        }
     }
 
     previewThemeById(themeId) {
@@ -589,16 +934,28 @@ class WYSIWYGEditor {
     }
 
     applyTheme(themeId, isPreview = false) {
-        const themes = this.getThemes();
-        const theme = themes.find(t => t.id === themeId);
+        // Check basic themes first
+        let themes = this.getThemes();
+        let theme = themes.find(t => t.id === themeId);
+
+        // If not found, check animated themes
+        if (!theme) {
+            themes = this.getAnimatedThemes();
+            theme = themes.find(t => t.id === themeId);
+        }
+
         if (!theme) return;
 
         const root = document.documentElement;
         const colors = theme.colors;
 
         // Check if this is a dark theme based on background color brightness
-        const darkThemes = ['midnight', 'forest', 'synthwave', 'retrowave'];
-        const isDarkTheme = darkThemes.includes(themeId);
+        const darkBasicThemes = ['midnight', 'forest', 'synthwave', 'retrowave'];
+        const darkAnimatedThemes = ['aurora', 'ocean-wave', 'sunset-glow', 'neon-pulse', 'enchanted-forest', 'galaxy'];
+        const isDarkTheme = darkBasicThemes.includes(themeId) || darkAnimatedThemes.includes(themeId);
+
+        // Remove any existing animated theme classes
+        root.classList.remove('animated-theme', 'theme-aurora', 'theme-ocean', 'theme-sunset-glow', 'theme-neon', 'theme-forest', 'theme-galaxy', 'theme-candy');
 
         // Apply CSS variables
         root.style.setProperty('--primary-color', colors.primary);
@@ -616,6 +973,11 @@ class WYSIWYGEditor {
             root.setAttribute('data-theme', 'dark');
         } else {
             root.removeAttribute('data-theme');
+        }
+
+        // Apply animated theme class if applicable
+        if (theme.animated && theme.cssClass) {
+            root.classList.add('animated-theme', theme.cssClass);
         }
     }
 

@@ -247,7 +247,9 @@ body {
     align-items: center;
     position: sticky;
     top: 0;
-    z-index: 100;
+    z-index: 1000;
+    isolation: isolate;
+    transform: translateZ(0);
 }
 
 .header-left {
@@ -294,6 +296,8 @@ body {
     display: flex;
     align-items: center;
     gap: 8px;
+    position: relative;
+    z-index: 100;
 }
 
 /* Buttons */
@@ -358,6 +362,7 @@ body {
 /* Dropdown */
 .dropdown {
     position: relative;
+    z-index: 2000;
 }
 
 .dropdown-menu {
@@ -371,7 +376,7 @@ body {
     box-shadow: var(--shadow-lg);
     min-width: 160px;
     display: none;
-    z-index: 200;
+    z-index: 2000;
 }
 
 .dropdown-menu.show {
@@ -454,6 +459,8 @@ body {
     margin: 0 auto;
     width: 100%;
     transition: gap 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    z-index: 1;
 }
 
 /* Editor Closed State */
@@ -1500,7 +1507,7 @@ body.editor-closed-state .hamburger-btn.floating {
     display: none;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: 5000;
 }
 
 .modal.show {
@@ -2036,6 +2043,52 @@ body.editor-closed-state .hamburger-btn.floating {
 
 /* ==================== Theme Modal Styles ==================== */
 
+/* Theme Tabs */
+.theme-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 0;
+}
+
+.theme-tab {
+    padding: 12px 24px;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-light);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.theme-tab:hover {
+    color: var(--primary-color);
+}
+
+.theme-tab.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+.theme-tab i {
+    font-size: 16px;
+}
+
+.theme-tab-content {
+    display: none;
+}
+
+.theme-tab-content.active {
+    display: block;
+}
+
 .theme-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -2152,6 +2205,508 @@ body.editor-closed-state .hamburger-btn.floating {
 
 .theme-card {
     position: relative;
+}
+
+/* Animated Theme Styles */
+.theme-card.animated .theme-card-preview {
+    position: relative;
+    overflow: hidden;
+}
+
+.theme-card.animated .theme-card-name {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.theme-card.animated .theme-card-name i {
+    font-size: 12px;
+    animation: sparkle 1.5s ease-in-out infinite;
+}
+
+@keyframes sparkle {
+    0%, 100% { opacity: 0.5; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.2); }
+}
+
+/* Theme Tooltip Styles */
+.theme-tooltip {
+    position: fixed;
+    z-index: 10000;
+    background: var(--white);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    padding: 12px 16px;
+    max-width: 280px;
+    font-size: 13px;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(5px);
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.theme-tooltip.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.theme-tooltip-title {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 8px;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.theme-tooltip-title i {
+    color: var(--primary-color);
+}
+
+.theme-tooltip-colors {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.theme-tooltip-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    border: 1px solid rgba(0,0,0,0.1);
+}
+
+.theme-tooltip-description {
+    color: var(--text-light);
+    line-height: 1.4;
+}
+
+.theme-tooltip-animation {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border-color);
+    font-size: 12px;
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* ==================== Aurora Theme Animation ==================== */
+.theme-aurora .theme-preview-body {
+    background: linear-gradient(-45deg, #0f0c29, #302b63, #24243e, #0f0c29);
+    background-size: 400% 400%;
+    animation: auroraShift 8s ease infinite;
+    position: relative;
+}
+
+.theme-aurora .theme-preview-body::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(180deg,
+        rgba(139, 92, 246, 0.3) 0%,
+        rgba(236, 72, 153, 0.2) 50%,
+        transparent 100%);
+    animation: auroraCurtain 6s ease-in-out infinite;
+}
+
+@keyframes auroraShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+@keyframes auroraCurtain {
+    0%, 100% { opacity: 0.4; transform: translateY(-5px); }
+    50% { opacity: 0.8; transform: translateY(5px); }
+}
+
+.theme-aurora .theme-preview-sidebar {
+    background: linear-gradient(180deg, rgba(124, 58, 237, 0.6), rgba(236, 72, 153, 0.4));
+    animation: auroraSidebarPulse 4s ease-in-out infinite;
+}
+
+@keyframes auroraSidebarPulse {
+    0%, 100% { opacity: 0.7; box-shadow: 0 0 10px rgba(139, 92, 246, 0.3); }
+    50% { opacity: 1; box-shadow: 0 0 20px rgba(139, 92, 246, 0.6); }
+}
+
+/* ==================== Ocean Wave Theme Animation ==================== */
+.theme-ocean .theme-preview-body {
+    background: linear-gradient(180deg, #0c4a6e 0%, #0077b6 30%, #00b4d8 60%, #90e0ef 100%);
+    position: relative;
+    overflow: hidden;
+}
+
+.theme-ocean .theme-preview-body::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: -100%;
+    width: 300%;
+    height: 40%;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(255,255,255,0.15) 25%,
+        rgba(255,255,255,0.3) 50%,
+        rgba(255,255,255,0.15) 75%,
+        transparent 100%);
+    animation: oceanWaveSlow 8s ease-in-out infinite;
+}
+
+.theme-ocean .theme-preview-body::after {
+    content: '';
+    position: absolute;
+    bottom: 10%;
+    left: -100%;
+    width: 300%;
+    height: 25%;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(255,255,255,0.1) 30%,
+        rgba(255,255,255,0.2) 50%,
+        rgba(255,255,255,0.1) 70%,
+        transparent 100%);
+    animation: oceanWaveSlow 10s ease-in-out infinite 2s;
+}
+
+@keyframes oceanWaveSlow {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(50%); }
+}
+
+.theme-ocean .theme-preview-sidebar {
+    background: linear-gradient(180deg, #075985, #0369a1);
+    position: relative;
+    overflow: hidden;
+}
+
+.theme-ocean .theme-preview-sidebar::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
+    animation: oceanBubble 6s ease-in-out infinite;
+}
+
+@keyframes oceanBubble {
+    0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.3; }
+    50% { transform: translate(10%, -10%) scale(1.1); opacity: 0.6; }
+}
+
+/* ==================== Sunset Glow Theme Animation ==================== */
+.theme-sunset-glow .theme-preview-body {
+    background: linear-gradient(135deg, #1c1917 0%, #292524 100%);
+    position: relative;
+    overflow: hidden;
+}
+
+.theme-sunset-glow .theme-preview-body::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 150%;
+    height: 150%;
+    background: radial-gradient(ellipse,
+        rgba(255, 107, 107, 0.4) 0%,
+        rgba(254, 202, 87, 0.3) 30%,
+        rgba(255, 159, 243, 0.2) 60%,
+        transparent 80%);
+    animation: sunsetGlowPulse 8s ease-in-out infinite;
+}
+
+.theme-sunset-glow .theme-preview-body::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    background: linear-gradient(0deg, rgba(249, 115, 22, 0.3) 0%, transparent 100%);
+    animation: sunsetHorizon 6s ease-in-out infinite;
+}
+
+@keyframes sunsetGlowPulse {
+    0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.6; }
+    50% { transform: translate(-10%, 10%) scale(1.2); opacity: 0.9; }
+}
+
+@keyframes sunsetHorizon {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 0.8; }
+}
+
+.theme-sunset-glow .theme-preview-sidebar {
+    background: linear-gradient(180deg, #78350f, #92400e);
+}
+
+.theme-sunset-glow .theme-preview-toolbar {
+    background: linear-gradient(90deg, #f97316, #fb923c, #f97316);
+    background-size: 200% 100%;
+    animation: sunsetToolbar 4s ease infinite;
+}
+
+@keyframes sunsetToolbar {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+/* ==================== Neon Pulse Theme Animation ==================== */
+.theme-neon .theme-preview-body {
+    background: #0a0a0a;
+    position: relative;
+    overflow: hidden;
+}
+
+.theme-neon .theme-preview-body::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background:
+        linear-gradient(90deg, transparent 0%, rgba(0, 255, 136, 0.03) 50%, transparent 100%),
+        linear-gradient(0deg, transparent 0%, rgba(0, 212, 255, 0.03) 50%, transparent 100%);
+    animation: neonGrid 4s linear infinite;
+}
+
+@keyframes neonGrid {
+    0% { opacity: 0.3; }
+    50% { opacity: 0.7; }
+    100% { opacity: 0.3; }
+}
+
+.theme-neon .theme-preview-sidebar {
+    background: #1a1a2e;
+    box-shadow: 0 0 8px #00ff88, inset 0 0 8px rgba(0, 255, 136, 0.15);
+    animation: neonSidebarPulse 2s ease-in-out infinite;
+}
+
+@keyframes neonSidebarPulse {
+    0%, 100% { box-shadow: 0 0 5px #00ff88, inset 0 0 5px rgba(0, 255, 136, 0.1); }
+    50% { box-shadow: 0 0 15px #00ff88, inset 0 0 10px rgba(0, 255, 136, 0.25); }
+}
+
+.theme-neon .theme-preview-toolbar {
+    background: linear-gradient(90deg, #00ff88, #00d4ff, #ff00ff, #00ff88);
+    background-size: 300% 100%;
+    animation: neonFlow 3s linear infinite;
+}
+
+@keyframes neonFlow {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 300% 50%; }
+}
+
+.theme-neon .theme-preview-content {
+    border: 1px solid rgba(0, 255, 136, 0.3) !important;
+    animation: neonContentBorder 2s ease-in-out infinite 0.5s;
+}
+
+@keyframes neonContentBorder {
+    0%, 100% { border-color: rgba(0, 255, 136, 0.3); }
+    50% { border-color: rgba(0, 255, 136, 0.6); }
+}
+
+/* ==================== Forest Theme Animation ==================== */
+.theme-forest .theme-preview-body {
+    background: linear-gradient(180deg, #1a4d1a 0%, #0f2d0f 50%, #071507 100%);
+    position: relative;
+    overflow: hidden;
+}
+
+.theme-forest .theme-preview-body::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 20%;
+    width: 60%;
+    height: 100%;
+    background: radial-gradient(ellipse at 50% 0%,
+        rgba(255, 255, 200, 0.15) 0%,
+        rgba(255, 255, 200, 0.05) 40%,
+        transparent 70%);
+    animation: forestSunbeam 7s ease-in-out infinite;
+}
+
+.theme-forest .theme-preview-body::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 30%;
+    background: linear-gradient(0deg, rgba(34, 197, 94, 0.2) 0%, transparent 100%);
+    animation: forestMist 5s ease-in-out infinite;
+}
+
+@keyframes forestSunbeam {
+    0%, 100% { opacity: 0.4; transform: translateX(-10px); }
+    50% { opacity: 0.8; transform: translateX(10px); }
+}
+
+@keyframes forestMist {
+    0%, 100% { opacity: 0.3; transform: translateY(0); }
+    50% { opacity: 0.6; transform: translateY(-5px); }
+}
+
+.theme-forest .theme-preview-sidebar {
+    background: linear-gradient(180deg, #22c55e20, #16a34a30);
+    border-right: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.theme-forest .theme-preview-content {
+    position: relative;
+}
+
+/* ==================== Galaxy Theme Animation ==================== */
+.theme-galaxy .theme-preview-body {
+    background: radial-gradient(ellipse at 30% 30%, #1e1b4b 0%, #0f0d24 50%, #050510 100%);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Star layer 1 - small fast twinkle */
+.theme-galaxy .theme-preview-body::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background:
+        radial-gradient(1px 1px at 8% 15%, white, transparent),
+        radial-gradient(1px 1px at 18% 42%, white, transparent),
+        radial-gradient(1px 1px at 28% 78%, white, transparent),
+        radial-gradient(1px 1px at 42% 22%, white, transparent),
+        radial-gradient(1px 1px at 55% 65%, white, transparent),
+        radial-gradient(1px 1px at 68% 35%, white, transparent),
+        radial-gradient(1px 1px at 82% 88%, white, transparent),
+        radial-gradient(1px 1px at 92% 12%, white, transparent);
+    animation: galaxyTwinkle1 2.5s ease-in-out infinite;
+}
+
+/* Star layer 2 - medium slower twinkle */
+.theme-galaxy .theme-preview-body::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background:
+        radial-gradient(1.5px 1.5px at 12% 55%, rgba(168,85,247,0.9), transparent),
+        radial-gradient(2px 2px at 35% 18%, rgba(255,255,255,1), transparent),
+        radial-gradient(1.5px 1.5px at 58% 82%, rgba(196,181,253,0.8), transparent),
+        radial-gradient(2px 2px at 78% 45%, rgba(255,255,255,0.9), transparent),
+        radial-gradient(1.5px 1.5px at 88% 72%, rgba(139,92,246,0.9), transparent);
+    animation: galaxyTwinkle2 4s ease-in-out infinite 0.5s;
+}
+
+@keyframes galaxyTwinkle1 {
+    0%, 100% { opacity: 0.3; }
+    20% { opacity: 0.8; }
+    40% { opacity: 0.4; }
+    60% { opacity: 0.9; }
+    80% { opacity: 0.5; }
+}
+
+@keyframes galaxyTwinkle2 {
+    0%, 100% { opacity: 0.4; }
+    15% { opacity: 1; }
+    35% { opacity: 0.5; }
+    55% { opacity: 0.9; }
+    75% { opacity: 0.3; }
+    90% { opacity: 0.7; }
+}
+
+.theme-galaxy .theme-preview-sidebar {
+    background: linear-gradient(180deg, rgba(139, 92, 246, 0.4), rgba(88, 28, 135, 0.6));
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.3);
+}
+
+/* ==================== Candy Theme Animation ==================== */
+.theme-candy .theme-preview-body {
+    background: linear-gradient(135deg, #fdf2f8, #fce7f3, #fbcfe8);
+    position: relative;
+    overflow: hidden;
+}
+
+.theme-candy .theme-preview-body::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg,
+        rgba(236, 72, 153, 0.2) 0%,
+        rgba(244, 114, 182, 0.15) 25%,
+        rgba(251, 207, 232, 0.1) 50%,
+        rgba(244, 114, 182, 0.15) 75%,
+        rgba(236, 72, 153, 0.2) 100%);
+    background-size: 200% 200%;
+    animation: candySwirl 6s ease infinite;
+}
+
+.theme-candy .theme-preview-body::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background:
+        radial-gradient(circle at 20% 30%, rgba(244, 114, 182, 0.3) 0%, transparent 20%),
+        radial-gradient(circle at 80% 70%, rgba(251, 113, 133, 0.3) 0%, transparent 25%),
+        radial-gradient(circle at 50% 50%, rgba(232, 121, 249, 0.2) 0%, transparent 30%);
+    animation: candyBubbles 8s ease-in-out infinite;
+}
+
+@keyframes candySwirl {
+    0% { background-position: 0% 0%; }
+    50% { background-position: 100% 100%; }
+    100% { background-position: 0% 0%; }
+}
+
+@keyframes candyBubbles {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    25% { transform: translate(5%, -5%) scale(1.05); }
+    50% { transform: translate(0, -10%) scale(1); }
+    75% { transform: translate(-5%, -5%) scale(1.05); }
+}
+
+.theme-candy .theme-preview-sidebar {
+    background: linear-gradient(180deg, #f9a8d4, #fbcfe8);
+    border-right: 2px solid #f472b6;
+}
+
+.theme-candy .theme-preview-toolbar {
+    background: linear-gradient(90deg, #ec4899, #f472b6, #f9a8d4, #f472b6, #ec4899);
+    background-size: 200% 100%;
+    animation: candyShimmer 3s linear infinite;
+}
+
+@keyframes candyShimmer {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
+}
+
+@keyframes candyShimmer {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
 }
 
 /* ==================== Reset Modal Styles ==================== */
@@ -2901,3 +3456,282 @@ body.editor-closed-state .hamburger-btn.floating {
     background: rgba(168, 85, 247, 0.1);
 }
 
+/* ==================== Animated Theme Styles for Editor UI ==================== */
+
+/* Aurora Borealis Theme */
+.animated-theme.theme-aurora .main-content {
+    position: relative;
+}
+
+.animated-theme.theme-aurora .main-content::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(-45deg, #0f0c29, #302b63, #24243e, #0f0c29);
+    background-size: 400% 400%;
+    animation: auroraBackground 15s ease infinite;
+    z-index: -9999;
+    pointer-events: none;
+}
+
+@keyframes auroraBackground {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+.animated-theme.theme-aurora .sidebar,
+.animated-theme.theme-aurora .editor-container {
+    box-shadow: 0 0 30px rgba(139, 92, 246, 0.2);
+}
+
+/* Ocean Wave Theme */
+.animated-theme.theme-ocean .header {
+    position: relative;
+}
+
+.animated-theme.theme-ocean .header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: -100%;
+    width: 300%;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, rgba(14, 165, 233, 0.6), rgba(125, 211, 252, 0.8), rgba(14, 165, 233, 0.6), transparent);
+    animation: oceanWaveHeader 8s ease-in-out infinite;
+    z-index: -1;
+    pointer-events: none;
+}
+
+@keyframes oceanWaveHeader {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(33%); }
+}
+
+.animated-theme.theme-ocean .main-content::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(ellipse at 50% 100%, rgba(14, 165, 233, 0.1) 0%, transparent 50%);
+    animation: oceanDepth 10s ease-in-out infinite;
+    z-index: -9999;
+    pointer-events: none;
+}
+
+@keyframes oceanDepth {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.6; }
+}
+
+/* Sunset Glow Theme */
+.animated-theme.theme-sunset-glow .app-container {
+    position: relative;
+}
+
+.animated-theme.theme-sunset-glow .header {
+    background: linear-gradient(135deg, var(--white), rgba(249, 115, 22, 0.1));
+}
+
+.animated-theme.theme-sunset-glow .btn-primary {
+    background: linear-gradient(135deg, #ff6b6b, #feca57);
+    background-size: 200% 200%;
+    animation: sunsetButtonGlow 3s ease infinite;
+    border: none;
+}
+
+@keyframes sunsetButtonGlow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* Neon Pulse Theme */
+.animated-theme.theme-neon .header,
+.animated-theme.theme-neon .sidebar,
+.animated-theme.theme-neon .editor-container {
+    border-color: #00ff88;
+    box-shadow: 0 0 10px rgba(0, 255, 136, 0.3), inset 0 0 10px rgba(0, 255, 136, 0.05);
+    animation: neonBorderPulse 2s ease-in-out infinite;
+}
+
+@keyframes neonBorderPulse {
+    0%, 100% { box-shadow: 0 0 5px rgba(0, 255, 136, 0.3), inset 0 0 5px rgba(0, 255, 136, 0.05); }
+    50% { box-shadow: 0 0 20px rgba(0, 255, 136, 0.5), inset 0 0 15px rgba(0, 255, 136, 0.1); }
+}
+
+.animated-theme.theme-neon .toolbar button:hover {
+    box-shadow: 0 0 10px var(--primary-color);
+}
+
+.animated-theme.theme-neon .btn-primary {
+    box-shadow: 0 0 15px var(--primary-color);
+    animation: neonButtonPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes neonButtonPulse {
+    0%, 100% { box-shadow: 0 0 10px var(--primary-color); }
+    50% { box-shadow: 0 0 25px var(--primary-color), 0 0 35px var(--primary-color); }
+}
+
+/* Enchanted Forest Theme */
+.animated-theme.theme-forest .main-content::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(ellipse at 30% 20%, rgba(34, 197, 94, 0.1) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 80%, rgba(34, 197, 94, 0.08) 0%, transparent 40%);
+    animation: forestLightDance 8s ease-in-out infinite;
+    z-index: -9999;
+    pointer-events: none;
+}
+
+@keyframes forestLightDance {
+    0%, 100% { opacity: 0.5; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.1); }
+}
+
+/* Galaxy Spiral Theme */
+.animated-theme.theme-galaxy .app-container {
+    position: relative;
+}
+
+/* Layer 1: Small distant stars - fast twinkle */
+.animated-theme.theme-galaxy .app-container::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background:
+        radial-gradient(1px 1px at 5% 15%, white, transparent),
+        radial-gradient(1px 1px at 12% 45%, white, transparent),
+        radial-gradient(1px 1px at 18% 75%, white, transparent),
+        radial-gradient(1px 1px at 25% 25%, white, transparent),
+        radial-gradient(1px 1px at 32% 85%, white, transparent),
+        radial-gradient(1px 1px at 38% 35%, white, transparent),
+        radial-gradient(1px 1px at 45% 65%, white, transparent),
+        radial-gradient(1px 1px at 52% 10%, white, transparent),
+        radial-gradient(1px 1px at 58% 55%, white, transparent),
+        radial-gradient(1px 1px at 65% 90%, white, transparent),
+        radial-gradient(1px 1px at 72% 30%, white, transparent),
+        radial-gradient(1px 1px at 78% 70%, white, transparent),
+        radial-gradient(1px 1px at 85% 20%, white, transparent),
+        radial-gradient(1px 1px at 92% 50%, white, transparent),
+        radial-gradient(1px 1px at 97% 80%, white, transparent);
+    animation: starTwinkle1 3s ease-in-out infinite;
+    z-index: -9999;
+    pointer-events: none;
+}
+
+/* Layer 2: Medium stars - medium twinkle */
+.animated-theme.theme-galaxy .app-container::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background:
+        radial-gradient(1.5px 1.5px at 8% 35%, rgba(255,255,255,0.9), transparent),
+        radial-gradient(1.5px 1.5px at 22% 60%, rgba(255,255,255,0.8), transparent),
+        radial-gradient(1.5px 1.5px at 35% 15%, rgba(255,255,255,0.9), transparent),
+        radial-gradient(1.5px 1.5px at 48% 80%, rgba(255,255,255,0.7), transparent),
+        radial-gradient(1.5px 1.5px at 62% 40%, rgba(255,255,255,0.9), transparent),
+        radial-gradient(1.5px 1.5px at 75% 95%, rgba(255,255,255,0.8), transparent),
+        radial-gradient(1.5px 1.5px at 88% 55%, rgba(255,255,255,0.9), transparent),
+        radial-gradient(2px 2px at 15% 88%, rgba(200,180,255,0.8), transparent),
+        radial-gradient(2px 2px at 55% 22%, rgba(180,200,255,0.8), transparent),
+        radial-gradient(2px 2px at 82% 72%, rgba(255,200,220,0.7), transparent);
+    animation: starTwinkle2 5s ease-in-out infinite 1s;
+    z-index: -9998;
+    pointer-events: none;
+}
+
+/* Layer 3: Bright accent stars - slow shimmer */
+.animated-theme.theme-galaxy .main-content::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background:
+        radial-gradient(2px 2px at 3% 28%, rgba(168,85,247,0.9), transparent),
+        radial-gradient(2.5px 2.5px at 27% 12%, rgba(255,255,255,1), transparent),
+        radial-gradient(2px 2px at 43% 92%, rgba(139,92,246,0.8), transparent),
+        radial-gradient(2.5px 2.5px at 67% 8%, rgba(255,255,255,0.9), transparent),
+        radial-gradient(2px 2px at 83% 45%, rgba(196,181,253,0.9), transparent),
+        radial-gradient(3px 3px at 95% 88%, rgba(255,255,255,1), transparent);
+    animation: starTwinkle3 7s ease-in-out infinite 2s;
+    z-index: -9997;
+    pointer-events: none;
+}
+
+@keyframes starTwinkle1 {
+    0%, 100% { opacity: 0.3; }
+    25% { opacity: 0.7; }
+    50% { opacity: 0.4; }
+    75% { opacity: 0.9; }
+}
+
+@keyframes starTwinkle2 {
+    0%, 100% { opacity: 0.5; }
+    20% { opacity: 0.9; }
+    40% { opacity: 0.3; }
+    60% { opacity: 0.8; }
+    80% { opacity: 0.5; }
+}
+
+@keyframes starTwinkle3 {
+    0%, 100% { opacity: 0.4; }
+    15% { opacity: 1; }
+    30% { opacity: 0.5; }
+    45% { opacity: 0.9; }
+    60% { opacity: 0.3; }
+    75% { opacity: 0.8; }
+    90% { opacity: 0.6; }
+}
+
+.animated-theme.theme-galaxy .sidebar,
+.animated-theme.theme-galaxy .editor-container {
+    box-shadow: 0 0 30px rgba(168, 85, 247, 0.2);
+}
+
+/* Candy Swirl Theme */
+.animated-theme.theme-candy .header {
+    background: linear-gradient(90deg, #fdf2f8, #fce7f3, #fbcfe8, #fce7f3, #fdf2f8);
+    background-size: 200% 100%;
+    animation: candyHeaderSwirl 5s linear infinite;
+}
+
+@keyframes candyHeaderSwirl {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
+}
+
+.animated-theme.theme-candy .btn-primary {
+    background: linear-gradient(90deg, #ec4899, #f472b6, #ec4899);
+    background-size: 200% 100%;
+    animation: candyButtonShimmer 2s linear infinite;
+    border: none;
+}
+
+@keyframes candyButtonShimmer {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
+}
+
+.animated-theme.theme-candy .sidebar {
+    border-right: 2px solid transparent;
+    border-image: linear-gradient(180deg, #f9a8d4, #fbcfe8, #f9a8d4) 1;
+}
