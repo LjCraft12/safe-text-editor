@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WYSIWYG Editor</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <i class="fas fa-file-alt logo"></i>
+                <div class="title-section">
+                    <input type="text" id="docTitle" class="doc-title" value="Untitled Document" placeholder="Document Title">
+                    <span class="subtitle">WYSIWYG Editor</span>
+                </div>
+            </div>
+            <div class="header-right">
+                <!-- Dark Mode Toggle -->
+                <div class="theme-toggle-wrapper">
+                    <input type="checkbox" id="darkModeToggle" class="theme-toggle-input">
+                    <label for="darkModeToggle" class="theme-toggle-label">
+                        <span class="theme-toggle-inner">
+                            <span class="toggle-icon sun"><i class="fas fa-sun"></i></span>
+                            <span class="toggle-icon moon"><i class="fas fa-moon"></i></span>
+                        </span>
+                        <span class="theme-toggle-switch"></span>
+                    </label>
+                </div>
+                <button class="btn btn-secondary" id="newDocBtn">
+                    <i class="fas fa-plus"></i> New
+                </button>
+                <button class="btn btn-primary" id="saveBtn">
+                    <i class="fas fa-save"></i> Save
+                </button>
+                <div class="dropdown">
+                    <button class="btn btn-secondary dropdown-toggle" id="exportBtn">
+                        <i class="fas fa-download"></i> Export
+                    </button>
+                    <div class="dropdown-menu" id="exportMenu">
+                        <button class="dropdown-item" id="exportHtml">Export as HTML</button>
+                        <button class="dropdown-item" id="exportText">Export as Text</button>
+                        <button class="dropdown-item" id="exportPdf">Print / Save as PDF</button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <!-- Sidebar -->
+            <aside class="sidebar" id="sidebar">
+                <div class="sidebar-header">
+                    <button class="hamburger-btn" id="hamburgerBtn" title="Toggle Sidebar">
+                        <span class="hamburger-line"></span>
+                        <span class="hamburger-line"></span>
+                        <span class="hamburger-line"></span>
+                    </button>
+                    <h3><i class="fas fa-folder"></i> My Documents</h3>
+                </div>
+                <div class="sidebar-content">
+                    <ul class="doc-list" id="docList">
+                        <li class="no-docs">No documents saved yet</li>
+                    </ul>
+                </div>
+                <!-- Resize Handle -->
+                <div class="resize-handle" id="resizeHandle">
+                    <div class="resize-handle-pill"></div>
+                </div>
+            </aside>
+
+            <!-- Editor Area -->
+            <main class="editor-container">
+                <!-- Toolbar -->
+                <div class="toolbar">
+                    <!-- History -->
+                    <div class="toolbar-group">
+                        <button class="toolbar-btn" data-command="undo" title="Undo (Ctrl+Z)">
+                            <i class="fas fa-undo"></i>
+                        </button>
+                        <button class="toolbar-btn" data-command="redo" title="Redo (Ctrl+Y)">
+                            <i class="fas fa-redo"></i>
+                        </button>
+                    </div>
+
+                    <div class="toolbar-divider"></div>
+
+                    <!-- Headings -->
+                    <div class="toolbar-group">
+                        <select class="toolbar-select" id="formatBlock" title="Paragraph Format">
+                            <option value="p">Paragraph</option>
+                            <option value="h1">Heading 1</option>
+                            <option value="h2">Heading 2</option>
+                            <option value="h3">Heading 3</option>
+                            <option value="h4">Heading 4</option>
+                            <option value="blockquote">Quote</option>
+                            <option value="pre">Code Block</option>
+                        </select>
+                    </div>
+
+                    <div class="toolbar-divider"></div>
+
+                    <!-- Font -->
+                    <div class="toolbar-group">
+                        <select class="toolbar-select" id="fontName" title="Font Family">
+                            <option value="Arial">Arial</option>
+                            <option value="Georgia">Georgia</option>
+                            <option value="Times New Roman">Times New Roman</option>
+                            <option value="Courier New">Courier New</option>
+                            <option value="Verdana">Verdana</option>
+                            <option value="Trebuchet MS">Trebuchet MS</option>
+                        </select>
+                        <select class="toolbar-select" id="fontSize" title="Font Size">
+                            <option value="1">8pt</option>
+                            <option value="2">10pt</option>
+                            <option value="3" selected>12pt</option>
+                            <option value="4">14pt</option>
+                            <option value="5">18pt</option>
+                            <option value="6">24pt</option>
+                            <option value="7">36pt</option>
+                        </select>
+                    </div>
+
+                    <div class="toolbar-divider"></div>
+
+                    <!-- Text Formatting -->
+                    <div class="toolbar-group">
+                        <button class="toolbar-btn" data-command="bold" title="Bold (Ctrl+B)">
+                            <i class="fas fa-bold"></i>
+                        </button>
+                        <button class="toolbar-btn" data-command="italic" title="Italic (Ctrl+I)">
+                            <i class="fas fa-italic"></i>
+                        </button>
+                        <button class="toolbar-btn" data-command="underline" title="Underline (Ctrl+U)">
+                            <i class="fas fa-underline"></i>
+                        </button>
+                        <button class="toolbar-btn" data-command="strikeThrough" title="Strikethrough">
+                            <i class="fas fa-strikethrough"></i>
+                        </button>
+                    </div>
+
+                    <div class="toolbar-divider"></div>
+
+                    <!-- Colors -->
+                    <div class="toolbar-group">
+                        <div class="color-picker-wrapper">
+                            <button class="toolbar-btn" title="Text Color">
+                                <i class="fas fa-font" style="border-bottom: 3px solid #000;"></i>
+                            </button>
+                            <input type="color" class="color-picker" id="foreColor" value="#000000">
+                        </div>
+                        <div class="color-picker-wrapper">
+                            <button class="toolbar-btn" title="Highlight Color">
+                                <i class="fas fa-highlighter"></i>
+                            </button>
+                            <input type="color" class="color-picker" id="backColor" value="#ffff00">
+                        </div>
+                    </div>
+
+                    <div class="toolbar-divider"></div>
+
+                    <!-- Alignment -->
+                    <div class="toolbar-group">
+                        <button class="toolbar-btn" data-command="justifyLeft" title="Align Left">
+                            <i class="fas fa-align-left"></i>
+                        </button>
+                        <button class="toolbar-btn" data-command="justifyCenter" title="Align Center">
+                            <i class="fas fa-align-center"></i>
+                        </button>
+                        <button class="toolbar-btn" data-command="justifyRight" title="Align Right">
+                            <i class="fas fa-align-right"></i>
+                        </button>
+                        <button class="toolbar-btn" data-command="justifyFull" title="Justify">
+                            <i class="fas fa-align-justify"></i>
+                        </button>
+                    </div>
+
+                    <div class="toolbar-divider"></div>
+
+                    <!-- Lists -->
+                    <div class="toolbar-group">
+                        <button class="toolbar-btn" data-command="insertUnorderedList" title="Bullet List">
+                            <i class="fas fa-list-ul"></i>
+                        </button>
+                        <button class="toolbar-btn" data-command="insertOrderedList" title="Numbered List">
+                            <i class="fas fa-list-ol"></i>
+                        </button>
+                        <button class="toolbar-btn" data-command="indent" title="Increase Indent">
+                            <i class="fas fa-indent"></i>
+                        </button>
+                        <button class="toolbar-btn" data-command="outdent" title="Decrease Indent">
+                            <i class="fas fa-outdent"></i>
+                        </button>
+                    </div>
+
+                    <div class="toolbar-divider"></div>
+
+                    <!-- Insert -->
+                    <div class="toolbar-group">
+                        <button class="toolbar-btn" id="linkBtn" title="Insert Link">
+                            <i class="fas fa-link"></i>
+                        </button>
+                        <button class="toolbar-btn" id="unlinkBtn" title="Remove Link">
+                            <i class="fas fa-unlink"></i>
+                        </button>
+                        <button class="toolbar-btn" id="imageBtn" title="Insert Image">
+                            <i class="fas fa-image"></i>
+                        </button>
+                        <button class="toolbar-btn" id="tableBtn" title="Insert Table">
+                            <i class="fas fa-table"></i>
+                        </button>
+                        <button class="toolbar-btn" data-command="insertHorizontalRule" title="Horizontal Line">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                    </div>
+
+                    <div class="toolbar-divider"></div>
+
+                    <!-- Clear -->
+                    <div class="toolbar-group">
+                        <button class="toolbar-btn" data-command="removeFormat" title="Clear Formatting">
+                            <i class="fas fa-eraser"></i>
+                        </button>
+                    </div>
+
+                    <div class="toolbar-divider"></div>
+
+                    <!-- Spell Check & Autocorrect -->
+                    <div class="toolbar-group">
+                        <div class="dropdown spellcheck-dropdown">
+                            <button class="toolbar-btn" id="spellcheckBtn" title="Spelling & Autocorrect Options">
+                                <i class="fas fa-spell-check"></i>
+                            </button>
+                            <div class="dropdown-menu spellcheck-menu" id="spellcheckMenu">
+                                <div class="dropdown-header">
+                                    <i class="fas fa-spell-check"></i> Spelling & Grammar
+                                </div>
+                                <div class="dropdown-option">
+                                    <label class="toggle-option">
+                                        <span>Spell Check</span>
+                                        <input type="checkbox" id="spellcheckToggle" checked>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div class="dropdown-option">
+                                    <label class="toggle-option">
+                                        <span>Autocorrect</span>
+                                        <input type="checkbox" id="autocorrectToggle" checked>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div class="dropdown-option">
+                                    <label class="toggle-option">
+                                        <span>Auto-capitalize</span>
+                                        <input type="checkbox" id="autocapitalizeToggle" checked>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div class="dropdown-divider"></div>
+                                <div class="dropdown-header">
+                                    <i class="fas fa-cog"></i> Options
+                                </div>
+                                <button class="dropdown-item" id="addWordBtn">
+                                    <i class="fas fa-plus-circle"></i> Add Word to Dictionary
+                                </button>
+                                <button class="dropdown-item" id="manageWordsBtn">
+                                    <i class="fas fa-book"></i> Manage Custom Dictionary
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Editor -->
+                <div class="editor-wrapper">
+                    <div class="editor" id="editor" contenteditable="true" spellcheck="true"></div>
+                    <!-- Autocorrect suggestion popup -->
+                    <div class="autocorrect-popup" id="autocorrectPopup">
+                        <div class="autocorrect-suggestion" id="autocorrectSuggestion"></div>
+                        <div class="autocorrect-actions">
+                            <button class="autocorrect-accept" id="acceptCorrection" title="Accept (Tab)">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button class="autocorrect-dismiss" id="dismissCorrection" title="Dismiss (Esc)">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status Bar -->
+                <div class="status-bar">
+                    <span id="charCount">0 characters</span>
+                    <span id="wordCount">0 words</span>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Link Modal -->
+    <div class="modal" id="linkModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Insert Link</h3>
+                <button class="modal-close" data-modal="linkModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="linkUrl">URL</label>
+                    <input type="url" id="linkUrl" placeholder="https://example.com">
+                </div>
+                <div class="form-group">
+                    <label for="linkText">Link Text (optional)</label>
+                    <input type="text" id="linkText" placeholder="Click here">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-modal="linkModal">Cancel</button>
+                <button class="btn btn-primary" id="insertLinkBtn">Insert Link</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Modal -->
+    <div class="modal" id="imageModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Insert Image</h3>
+                <button class="modal-close" data-modal="imageModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="imageUrl">Image URL</label>
+                    <input type="url" id="imageUrl" placeholder="https://example.com/image.jpg">
+                </div>
+                <div class="form-group">
+                    <label for="imageAlt">Alt Text</label>
+                    <input type="text" id="imageAlt" placeholder="Image description">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-modal="imageModal">Cancel</button>
+                <button class="btn btn-primary" id="insertImageBtn">Insert Image</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table Modal -->
+    <div class="modal" id="tableModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Insert Table</h3>
+                <button class="modal-close" data-modal="tableModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="tableRows">Rows</label>
+                        <input type="number" id="tableRows" value="3" min="1" max="20">
+                    </div>
+                    <div class="form-group">
+                        <label for="tableCols">Columns</label>
+                        <input type="number" id="tableCols" value="3" min="1" max="10">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="tableHeader" checked>
+                        Include header row
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-modal="tableModal">Cancel</button>
+                <button class="btn btn-primary" id="insertTableBtn">Insert Table</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Word to Dictionary Modal -->
+    <div class="modal" id="addWordModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-plus-circle"></i> Add Word to Dictionary</h3>
+                <button class="modal-close" data-modal="addWordModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="newWord">Word</label>
+                    <input type="text" id="newWord" placeholder="Enter word to add">
+                </div>
+                <p class="form-hint">This word will no longer be marked as misspelled.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-modal="addWordModal">Cancel</button>
+                <button class="btn btn-primary" id="saveWordBtn">Add Word</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manage Dictionary Modal -->
+    <div class="modal" id="dictionaryModal">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h3><i class="fas fa-book"></i> Custom Dictionary</h3>
+                <button class="modal-close" data-modal="dictionaryModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="dictionary-section">
+                    <h4>Custom Words</h4>
+                    <div class="dictionary-list" id="customWordsList">
+                        <p class="empty-message">No custom words added yet.</p>
+                    </div>
+                </div>
+                <div class="dictionary-section">
+                    <h4>Autocorrect Rules</h4>
+                    <div class="autocorrect-add-form">
+                        <input type="text" id="autocorrectFrom" placeholder="Replace this...">
+                        <span class="arrow-icon"><i class="fas fa-arrow-right"></i></span>
+                        <input type="text" id="autocorrectTo" placeholder="With this...">
+                        <button class="btn btn-primary btn-sm" id="addAutocorrectBtn">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                    <div class="dictionary-list" id="autocorrectRulesList">
+                        <p class="empty-message">No custom autocorrect rules.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-modal="dictionaryModal">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
