@@ -1,4 +1,4 @@
-// WYSIWYG Editor - Pure JavaScript Implementation
+// Safe Text Editor - Pure JavaScript Implementation
 
 class WYSIWYGEditor {
     constructor() {
@@ -85,12 +85,18 @@ class WYSIWYGEditor {
         // Editor customization (status bar visibility)
         this.editorCustomization = this.loadEditorCustomization();
 
+        // Toolbar customization
+        this.toolbarCustomization = this.loadToolbarCustomization();
+
         // Unsaved changes tracking
         this.pendingUnsavedModal = null;
         this.pendingUnsavedCallback = null;
 
         // Flag creator modal tracking
         this.flagCreatorOriginalState = null;
+
+        // Toolbar customization modal tracking
+        this.toolbarCustomizationOriginalState = null;
 
         this.init();
     }
@@ -193,7 +199,9 @@ class WYSIWYGEditor {
             this.initFileMenu();
             this.initDocumentContextMenu();
             this.initCustomizeEditorModal();
+            this.initCustomizeToolbarModal();
             this.initUnsavedChangesModal();
+            this.initHelpMenu();
             this.bindToolbarButtons();
             this.bindSelects();
             this.bindColorPickers();
@@ -210,6 +218,7 @@ class WYSIWYGEditor {
             this.updateReadingTime();
             this.applyAnimatedThemeCustomizations();
             this.applyEditorCustomization();
+            this.applyToolbarCustomization();
         } catch (error) {
             console.error('Error during initialization:', error);
         }
@@ -1143,8 +1152,10 @@ class WYSIWYGEditor {
         // Switch to theme mode so the newly selected theme is visible
         this.setThemeMode('theme');
 
-        // Close modal
-        document.getElementById('themeModal').classList.remove('show');
+        // Only close if save behavior is set to close
+        if (this.modalSaveBehavior === 'saveAndClose') {
+            document.getElementById('themeModal').classList.remove('show');
+        }
         this.showNotification('Theme saved!', 'theme');
     }
 
@@ -3070,6 +3081,7 @@ class WYSIWYGEditor {
             'wysiwyg_default_load_action',
             'wysiwyg_custom_flags',
             'wysiwyg_editor_customization',
+            'wysiwyg_toolbar_customization',
             'wysiwyg_animated_theme_settings',
             'wysiwyg_theme' // Legacy key
         ];
@@ -3325,7 +3337,10 @@ class WYSIWYGEditor {
             this.startAutoSave();
         }
 
-        this.closeAdvancedSettings();
+        // Only close if save behavior is set to close
+        if (this.modalSaveBehavior === 'saveAndClose') {
+            this.closeAdvancedSettings();
+        }
         this.showNotification('Settings saved!', 'settings');
     }
 
@@ -3488,14 +3503,17 @@ class WYSIWYGEditor {
 
         this.saveToastSettings();
 
-        // Close and return to previous modal
-        document.getElementById('toastSettingsModal').classList.remove('show');
+        // Only close if save behavior is set to close
+        if (this.modalSaveBehavior === 'saveAndClose') {
+            // Close and return to previous modal
+            document.getElementById('toastSettingsModal').classList.remove('show');
 
-        if (this.previousModal) {
-            setTimeout(() => {
-                document.getElementById(this.previousModal).classList.add('show');
-                this.previousModal = null;
-            }, 150);
+            if (this.previousModal) {
+                setTimeout(() => {
+                    document.getElementById(this.previousModal).classList.add('show');
+                    this.previousModal = null;
+                }, 150);
+            }
         }
 
         // Show confirmation if notifications are enabled
@@ -3545,6 +3563,27 @@ class WYSIWYGEditor {
             resetBtn.addEventListener('click', () => this.resetCustomizeEditorDefaults());
         }
 
+        // Toggle All switch
+        const toggleAllSwitch = document.getElementById('customizeEditorToggleAll');
+        if (toggleAllSwitch) {
+            toggleAllSwitch.addEventListener('change', () => {
+                const isChecked = toggleAllSwitch.checked;
+                document.getElementById('showWordCount').checked = isChecked;
+                document.getElementById('showCharCount').checked = isChecked;
+                document.getElementById('showFlagStatus').checked = isChecked;
+                document.getElementById('showReadingTime').checked = isChecked;
+            });
+        }
+
+        // Update Toggle All state when individual options change
+        const editorOptions = ['showWordCount', 'showCharCount', 'showFlagStatus', 'showReadingTime'];
+        editorOptions.forEach(id => {
+            const checkbox = document.getElementById(id);
+            if (checkbox) {
+                checkbox.addEventListener('change', () => this.updateCustomizeEditorToggleAll());
+            }
+        });
+
         // Close on backdrop click
         if (modal) {
             modal.addEventListener('click', (e) => {
@@ -3559,6 +3598,17 @@ class WYSIWYGEditor {
         }
     }
 
+    updateCustomizeEditorToggleAll() {
+        const toggleAll = document.getElementById('customizeEditorToggleAll');
+        const allChecked =
+            document.getElementById('showWordCount').checked &&
+            document.getElementById('showCharCount').checked &&
+            document.getElementById('showFlagStatus').checked &&
+            document.getElementById('showReadingTime').checked;
+
+        toggleAll.checked = allChecked;
+    }
+
     openCustomizeEditorModal() {
         // Store original state for change detection
         this.customizeEditorOriginalState = JSON.stringify(this.editorCustomization);
@@ -3568,6 +3618,9 @@ class WYSIWYGEditor {
         document.getElementById('showCharCount').checked = this.editorCustomization.showCharCount;
         document.getElementById('showFlagStatus').checked = this.editorCustomization.showFlagStatus;
         document.getElementById('showReadingTime').checked = this.editorCustomization.showReadingTime;
+
+        // Update Toggle All state
+        this.updateCustomizeEditorToggleAll();
 
         // Show modal
         document.getElementById('customizeEditorModal').classList.add('show');
@@ -3636,6 +3689,272 @@ class WYSIWYGEditor {
         this.showNotification('Reset to defaults', 'settings');
     }
 
+    // ==================== Customize Toolbar Modal ====================
+
+    loadToolbarCustomization() {
+        const saved = localStorage.getItem('wysiwyg_toolbar_customization');
+        const defaults = this.getDefaultToolbarState();
+
+        if (saved) {
+            const savedState = JSON.parse(saved);
+            // Merge saved state with defaults - this ensures new tools get their default values
+            // and existing saved preferences are preserved
+            return { ...defaults, ...savedState };
+        }
+        return defaults;
+    }
+
+    getDefaultToolbarState() {
+        return {
+            undo: true,
+            redo: true,
+            bold: true,
+            italic: true,
+            underline: true,
+            strikeThrough: true,
+            formatBlock: true,
+            fontName: true,
+            fontSize: true,
+            foreColor: true,
+            backColor: true,
+            justifyLeft: true,
+            justifyCenter: true,
+            justifyRight: true,
+            justifyFull: true,
+            insertUnorderedList: true,
+            insertOrderedList: true,
+            indent: true,
+            outdent: true,
+            link: true,
+            unlink: true,
+            image: true,
+            table: true,
+            insertHorizontalRule: true,
+            removeFormat: true,
+            spellcheck: true,
+            subscript: false,
+            superscript: false
+        };
+    }
+
+    saveToolbarCustomization() {
+        localStorage.setItem('wysiwyg_toolbar_customization', JSON.stringify(this.toolbarCustomization));
+    }
+
+    initCustomizeToolbarModal() {
+        const modal = document.getElementById('customizeToolbarModal');
+        const closeBtn = document.getElementById('customizeToolbarClose');
+        const cancelBtn = document.getElementById('customizeToolbarCancelBtn');
+        const saveBtn = document.getElementById('customizeToolbarSaveBtn');
+        const resetBtn = document.getElementById('customizeToolbarResetBtn');
+        const customizeBtn = document.getElementById('customizeToolbarBtn');
+
+        // Open modal from View menu
+        if (customizeBtn) {
+            customizeBtn.addEventListener('click', () => {
+                this.openCustomizeToolbarModal();
+                document.getElementById('viewMenu').classList.remove('show');
+            });
+        }
+
+        // Close button (X)
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this.handleCustomizeToolbarClose());
+        }
+
+        // Cancel button
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => this.handleCustomizeToolbarClose());
+        }
+
+        // Save button
+        if (saveBtn) {
+            saveBtn.addEventListener('click', () => this.saveToolbarSettings());
+        }
+
+        // Reset to defaults button
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => this.resetToolbarDefaults());
+        }
+
+        // Toggle All switch
+        const toggleAllSwitch = document.getElementById('customizeToolbarToggleAll');
+        if (toggleAllSwitch) {
+            toggleAllSwitch.addEventListener('change', () => {
+                const isChecked = toggleAllSwitch.checked;
+                document.querySelectorAll('#customizeToolbarModal [data-tool]').forEach(checkbox => {
+                    checkbox.checked = isChecked;
+                });
+            });
+        }
+
+        // Update Toggle All state when individual options change
+        document.querySelectorAll('#customizeToolbarModal [data-tool]').forEach(checkbox => {
+            checkbox.addEventListener('change', () => this.updateCustomizeToolbarToggleAll());
+        });
+
+        // Close on backdrop click
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    this.handleModalClickOutside(
+                        'customizeToolbarModal',
+                        () => this.saveToolbarSettings(),
+                        () => this.handleCustomizeToolbarClose()
+                    );
+                }
+            });
+        }
+    }
+
+    updateCustomizeToolbarToggleAll() {
+        const toggleAll = document.getElementById('customizeToolbarToggleAll');
+        const checkboxes = document.querySelectorAll('#customizeToolbarModal [data-tool]');
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+        toggleAll.checked = allChecked;
+    }
+
+    openCustomizeToolbarModal() {
+        // Store original state for change detection
+        this.toolbarCustomizationOriginalState = JSON.stringify(this.toolbarCustomization);
+
+        // Populate current values
+        document.querySelectorAll('#customizeToolbarModal [data-tool]').forEach(checkbox => {
+            const tool = checkbox.dataset.tool;
+            // Use strict equality - if the value is true, check it; otherwise uncheck
+            checkbox.checked = this.toolbarCustomization[tool] === true;
+        });
+
+        // Update Toggle All state
+        this.updateCustomizeToolbarToggleAll();
+
+        // Show modal
+        document.getElementById('customizeToolbarModal').classList.add('show');
+    }
+
+    hasToolbarCustomizationChanges() {
+        const currentState = {};
+        document.querySelectorAll('#customizeToolbarModal [data-tool]').forEach(checkbox => {
+            currentState[checkbox.dataset.tool] = checkbox.checked;
+        });
+        return JSON.stringify(currentState) !== this.toolbarCustomizationOriginalState;
+    }
+
+    handleCustomizeToolbarClose() {
+        if (this.hasToolbarCustomizationChanges()) {
+            this.showUnsavedChangesWarning(
+                'customizeToolbarModal',
+                () => this.saveToolbarSettings(),
+                () => this.closeCustomizeToolbarModal()
+            );
+        } else {
+            this.closeCustomizeToolbarModal();
+        }
+    }
+
+    closeCustomizeToolbarModal() {
+        document.getElementById('customizeToolbarModal').classList.remove('show');
+        this.toolbarCustomizationOriginalState = null;
+    }
+
+    saveToolbarSettings() {
+        // Get values from UI
+        const newSettings = {};
+        document.querySelectorAll('#customizeToolbarModal [data-tool]').forEach(checkbox => {
+            newSettings[checkbox.dataset.tool] = checkbox.checked;
+        });
+
+        this.toolbarCustomization = newSettings;
+
+        // Save to localStorage
+        this.saveToolbarCustomization();
+
+        // Apply changes
+        this.applyToolbarCustomization();
+
+        // Update original state
+        this.toolbarCustomizationOriginalState = JSON.stringify(this.toolbarCustomization);
+
+        // Handle modal closing based on save behavior
+        if (this.modalSaveBehavior === 'saveAndClose') {
+            this.closeCustomizeToolbarModal();
+        }
+
+        this.showNotification('Toolbar settings saved!', 'settings');
+    }
+
+    resetToolbarDefaults() {
+        // Reset all toggles to their default states
+        const defaults = this.getDefaultToolbarState();
+        document.querySelectorAll('#customizeToolbarModal [data-tool]').forEach(checkbox => {
+            const tool = checkbox.dataset.tool;
+            checkbox.checked = defaults[tool] !== false;
+        });
+
+        this.showNotification('Reset to defaults', 'settings');
+    }
+
+    applyToolbarCustomization() {
+        const toolbar = document.querySelector('.toolbar');
+        if (!toolbar) return;
+
+        // Map tool names to their button selectors
+        const toolButtonMap = {
+            undo: '[data-command="undo"]',
+            redo: '[data-command="redo"]',
+            bold: '[data-command="bold"]',
+            italic: '[data-command="italic"]',
+            underline: '[data-command="underline"]',
+            strikeThrough: '[data-command="strikeThrough"]',
+            subscript: '[data-command="subscript"]',
+            superscript: '[data-command="superscript"]',
+            formatBlock: '#formatSelect',
+            fontName: '#fontSelect',
+            fontSize: '#sizeSelect',
+            foreColor: '#textColorPicker',
+            backColor: '#highlightColorPicker',
+            justifyLeft: '[data-command="justifyLeft"]',
+            justifyCenter: '[data-command="justifyCenter"]',
+            justifyRight: '[data-command="justifyRight"]',
+            justifyFull: '[data-command="justifyFull"]',
+            insertUnorderedList: '[data-command="insertUnorderedList"]',
+            insertOrderedList: '[data-command="insertOrderedList"]',
+            indent: '[data-command="indent"]',
+            outdent: '[data-command="outdent"]',
+            link: '#linkBtn',
+            unlink: '[data-command="unlink"]',
+            image: '#imageBtn',
+            table: '#tableBtn',
+            insertHorizontalRule: '[data-command="insertHorizontalRule"]',
+            removeFormat: '[data-command="removeFormat"]',
+            spellcheck: '#spellcheckToggle'
+        };
+
+        // Apply visibility to each tool
+        Object.entries(toolButtonMap).forEach(([tool, selector]) => {
+            const element = document.querySelector(selector);
+            if (element) {
+                // Find the parent toolbar-btn or the element itself
+                const btn = element.closest('.toolbar-btn') || element.closest('.toolbar-select') || element;
+                if (btn) {
+                    // Use strict equality - only show if explicitly true
+                    btn.style.display = this.toolbarCustomization[tool] === true ? '' : 'none';
+                }
+            }
+        });
+
+        // Handle color picker parents (they're inside toolbar-btn)
+        const textColorBtn = document.querySelector('.toolbar-btn:has(#textColorPicker)');
+        const highlightColorBtn = document.querySelector('.toolbar-btn:has(#highlightColorPicker)');
+
+        if (textColorBtn) {
+            textColorBtn.style.display = this.toolbarCustomization.foreColor === true ? '' : 'none';
+        }
+        if (highlightColorBtn) {
+            highlightColorBtn.style.display = this.toolbarCustomization.backColor === true ? '' : 'none';
+        }
+    }
+
     // ==================== Unsaved Changes Modal ====================
 
     initUnsavedChangesModal() {
@@ -3696,6 +4015,1186 @@ class WYSIWYGEditor {
 
     closeUnsavedChangesModal() {
         document.getElementById('unsavedChangesModal').classList.remove('show');
+    }
+
+    // ==================== Help Menu ====================
+
+    initHelpMenu() {
+        const helpBtn = document.getElementById('helpBtn');
+        const helpMenu = document.getElementById('helpMenu');
+        const showDocsBtn = document.getElementById('showDocsBtn');
+        const aboutBtn = document.getElementById('aboutBtn');
+        const docsModal = document.getElementById('docsModal');
+        const docsModalClose = document.getElementById('docsModalClose');
+        const aboutModal = document.getElementById('aboutModal');
+        const aboutModalClose = document.getElementById('aboutModalClose');
+        const aboutCloseBtn = document.getElementById('aboutCloseBtn');
+        const docsSearchInput = document.getElementById('docsSearchInput');
+
+        // Toggle help menu
+        if (helpBtn && helpMenu) {
+            helpBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+
+                // Close other menus first (but not the help menu)
+                const isCurrentlyOpen = helpMenu.classList.contains('show');
+                document.querySelectorAll('.dropdown-menu').forEach(menu => {
+                    if (menu.id !== 'helpMenu') {
+                        menu.classList.remove('show');
+                    }
+                });
+
+                // Toggle the help menu
+                if (isCurrentlyOpen) {
+                    helpMenu.classList.remove('show');
+                } else {
+                    helpMenu.classList.add('show');
+                }
+            });
+        }
+
+        // Show Documentation modal
+        if (showDocsBtn) {
+            showDocsBtn.addEventListener('click', () => {
+                helpMenu.classList.remove('show');
+                this.openDocsModal();
+            });
+        }
+
+        // Show About modal
+        if (aboutBtn) {
+            aboutBtn.addEventListener('click', () => {
+                helpMenu.classList.remove('show');
+                aboutModal.classList.add('show');
+            });
+        }
+
+        // Close docs modal
+        if (docsModalClose) {
+            docsModalClose.addEventListener('click', () => {
+                docsModal.classList.remove('show');
+            });
+        }
+
+        // Close about modal
+        if (aboutModalClose) {
+            aboutModalClose.addEventListener('click', () => {
+                aboutModal.classList.remove('show');
+            });
+        }
+
+        if (aboutCloseBtn) {
+            aboutCloseBtn.addEventListener('click', () => {
+                aboutModal.classList.remove('show');
+            });
+        }
+
+        // Backdrop click for modals
+        if (docsModal) {
+            docsModal.addEventListener('click', (e) => {
+                if (e.target === docsModal) {
+                    docsModal.classList.remove('show');
+                }
+            });
+        }
+
+        if (aboutModal) {
+            aboutModal.addEventListener('click', (e) => {
+                if (e.target === aboutModal) {
+                    aboutModal.classList.remove('show');
+                }
+            });
+        }
+
+        // Documentation navigation
+        document.querySelectorAll('.docs-nav-header').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const section = btn.dataset.section;
+                this.showDocsSection(section);
+            });
+        });
+
+        // Search functionality
+        if (docsSearchInput) {
+            docsSearchInput.addEventListener('input', (e) => {
+                this.searchDocs(e.target.value);
+            });
+        }
+
+        // Close menus when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!helpBtn.contains(e.target) && !helpMenu.contains(e.target)) {
+                helpMenu.classList.remove('show');
+            }
+        });
+    }
+
+    openDocsModal() {
+        const docsModal = document.getElementById('docsModal');
+        this.populateDocsContent();
+        this.showDocsSection('getting-started');
+        document.getElementById('docsSearchInput').value = '';
+        docsModal.classList.add('show');
+    }
+
+    showDocsSection(sectionId) {
+        // Update nav
+        document.querySelectorAll('.docs-nav-header').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.section === sectionId);
+        });
+
+        // Update content
+        document.querySelectorAll('.docs-section').forEach(section => {
+            section.classList.toggle('active', section.id === `docs-${sectionId}`);
+        });
+    }
+
+    getDocsContent() {
+        return {
+            'getting-started': {
+                title: 'Getting Started',
+                icon: 'fa-rocket',
+                intro: 'Welcome to the Safe Text Editor! This guide will help you get started with creating and editing documents.',
+                subsections: [
+                    {
+                        title: 'Creating Your First Document',
+                        icon: 'fa-file-plus',
+                        content: `
+                            <p>When you first open the editor, you'll see a blank document ready for editing. Simply click in the editor area and start typing!</p>
+                            <div class="docs-steps">
+                                <div class="docs-step">
+                                    <div class="docs-step-number"></div>
+                                    <div class="docs-step-content">
+                                        <h4>Start Typing</h4>
+                                        <p>Click anywhere in the main editor area and begin typing your content.</p>
+                                    </div>
+                                </div>
+                                <div class="docs-step">
+                                    <div class="docs-step-number"></div>
+                                    <div class="docs-step-content">
+                                        <h4>Name Your Document</h4>
+                                        <p>Click on "Untitled Document" at the top left to give your document a meaningful name.</p>
+                                    </div>
+                                </div>
+                                <div class="docs-step">
+                                    <div class="docs-step-number"></div>
+                                    <div class="docs-step-content">
+                                        <h4>Save Your Work</h4>
+                                        <p>Press <span class="docs-key">Ctrl</span> + <span class="docs-key">S</span> or click the Save button to save your document.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `
+                    },
+                    {
+                        title: 'Interface Overview',
+                        icon: 'fa-desktop',
+                        content: `
+                            <p>The editor interface is divided into several key areas:</p>
+                            <div class="docs-feature-grid">
+                                <div class="docs-feature-item">
+                                    <i class="fas fa-bars"></i>
+                                    <span><strong>Header Bar</strong> - Contains menus, document title, and main actions</span>
+                                </div>
+                                <div class="docs-feature-item">
+                                    <i class="fas fa-folder-open"></i>
+                                    <span><strong>Document Sidebar</strong> - Lists your saved documents, folders, and auto-saves</span>
+                                </div>
+                                <div class="docs-feature-item">
+                                    <i class="fas fa-tools"></i>
+                                    <span><strong>Toolbar</strong> - Formatting buttons for text styling</span>
+                                </div>
+                                <div class="docs-feature-item">
+                                    <i class="fas fa-edit"></i>
+                                    <span><strong>Editor Area</strong> - Where you write and edit your content</span>
+                                </div>
+                                <div class="docs-feature-item">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span><strong>Status Bar</strong> - Shows word count, character count, and reading time</span>
+                                </div>
+                            </div>
+                        `
+                    }
+                ]
+            },
+            'editor-basics': {
+                title: 'Editor Basics',
+                icon: 'fa-edit',
+                intro: 'Learn the fundamental features of the editor to boost your productivity.',
+                subsections: [
+                    {
+                        title: 'Selecting Text',
+                        icon: 'fa-i-cursor',
+                        content: `
+                            <p>To format text, you first need to select it:</p>
+                            <ul>
+                                <li><strong>Click and drag</strong> - Click at the start of the text, hold, and drag to the end</li>
+                                <li><strong>Double-click</strong> - Select a single word</li>
+                                <li><strong>Triple-click</strong> - Select an entire paragraph</li>
+                                <li><strong>Ctrl + A</strong> - Select all text in the document</li>
+                            </ul>
+                            <div class="docs-tip">
+                                <div class="docs-tip-header"><i class="fas fa-lightbulb"></i> Pro Tip</div>
+                                <p>Hold <span class="docs-key">Shift</span> while clicking to extend your selection from the cursor to the click point.</p>
+                            </div>
+                        `
+                    },
+                    {
+                        title: 'Copy, Cut, and Paste',
+                        icon: 'fa-clipboard',
+                        content: `
+                            <p>Move and duplicate content using these essential shortcuts:</p>
+                            <table class="docs-table">
+                                <tr>
+                                    <th>Action</th>
+                                    <th>Shortcut</th>
+                                    <th>Description</th>
+                                </tr>
+                                <tr>
+                                    <td>Copy</td>
+                                    <td><span class="docs-key">Ctrl</span> + <span class="docs-key">C</span></td>
+                                    <td>Copy selected text to clipboard</td>
+                                </tr>
+                                <tr>
+                                    <td>Cut</td>
+                                    <td><span class="docs-key">Ctrl</span> + <span class="docs-key">X</span></td>
+                                    <td>Cut selected text to clipboard</td>
+                                </tr>
+                                <tr>
+                                    <td>Paste</td>
+                                    <td><span class="docs-key">Ctrl</span> + <span class="docs-key">V</span></td>
+                                    <td>Paste content from clipboard</td>
+                                </tr>
+                            </table>
+                        `
+                    },
+                    {
+                        title: 'Undo and Redo',
+                        icon: 'fa-undo',
+                        content: `
+                            <p>Made a mistake? No problem! Use undo and redo to navigate through your edit history:</p>
+                            <ul>
+                                <li><strong>Undo</strong>: <span class="docs-key">Ctrl</span> + <span class="docs-key">Z</span> - Reverses your last action</li>
+                                <li><strong>Redo</strong>: <span class="docs-key">Ctrl</span> + <span class="docs-key">Y</span> - Restores what you just undid</li>
+                            </ul>
+                            <p>You can also use the Undo and Redo buttons in the toolbar, or find them in the <strong>Edit</strong> menu.</p>
+                        `
+                    }
+                ]
+            },
+            'formatting': {
+                title: 'Text Formatting',
+                icon: 'fa-font',
+                intro: 'Transform your plain text into beautifully formatted documents using these formatting tools.',
+                subsections: [
+                    {
+                        title: 'Basic Text Styles',
+                        icon: 'fa-bold',
+                        content: `
+                            <p>Apply basic formatting to make your text stand out:</p>
+                            <table class="docs-table">
+                                <tr>
+                                    <th>Style</th>
+                                    <th>Shortcut</th>
+                                    <th>Toolbar Button</th>
+                                </tr>
+                                <tr>
+                                    <td><strong>Bold</strong></td>
+                                    <td><span class="docs-key">Ctrl</span> + <span class="docs-key">B</span></td>
+                                    <td><i class="fas fa-bold"></i></td>
+                                </tr>
+                                <tr>
+                                    <td><em>Italic</em></td>
+                                    <td><span class="docs-key">Ctrl</span> + <span class="docs-key">I</span></td>
+                                    <td><i class="fas fa-italic"></i></td>
+                                </tr>
+                                <tr>
+                                    <td><u>Underline</u></td>
+                                    <td><span class="docs-key">Ctrl</span> + <span class="docs-key">U</span></td>
+                                    <td><i class="fas fa-underline"></i></td>
+                                </tr>
+                                <tr>
+                                    <td><s>Strikethrough</s></td>
+                                    <td>—</td>
+                                    <td><i class="fas fa-strikethrough"></i></td>
+                                </tr>
+                                <tr>
+                                    <td>Subscript</td>
+                                    <td>—</td>
+                                    <td><i class="fas fa-subscript"></i></td>
+                                </tr>
+                                <tr>
+                                    <td>Superscript</td>
+                                    <td>—</td>
+                                    <td><i class="fas fa-superscript"></i></td>
+                                </tr>
+                            </table>
+                            <div class="docs-tip">
+                                <div class="docs-tip-header"><i class="fas fa-lightbulb"></i> Note</div>
+                                <p>Subscript and Superscript are disabled by default. Enable them in <strong>View → Customize Toolbar</strong>.</p>
+                            </div>
+                        `
+                    },
+                    {
+                        title: 'Paragraph Formats',
+                        icon: 'fa-heading',
+                        content: `
+                            <p>Use the format dropdown to change paragraph styles:</p>
+                            <ul>
+                                <li><strong>Headings (H1-H4)</strong> - Create document structure with hierarchical headings</li>
+                                <li><strong>Paragraph</strong> - Normal body text</li>
+                                <li><strong>Blockquote</strong> - Indented quote with left border</li>
+                                <li><strong>Code</strong> - Monospace font for code snippets</li>
+                            </ul>
+                            <p>Select the text and choose the format from the dropdown, or use the format dropdown before typing.</p>
+                        `
+                    },
+                    {
+                        title: 'Font & Size',
+                        icon: 'fa-text-height',
+                        content: `
+                            <p>Customize the appearance of your text:</p>
+                            <ul>
+                                <li><strong>Font Family</strong> - Choose from Arial, Georgia, Times New Roman, Courier New, Verdana, and more</li>
+                                <li><strong>Font Size</strong> - Select sizes from 8pt to 36pt</li>
+                            </ul>
+                            <p>Select text first, then choose from the dropdowns in the toolbar.</p>
+                        `
+                    },
+                    {
+                        title: 'Colors',
+                        icon: 'fa-palette',
+                        content: `
+                            <p>Add color to your documents:</p>
+                            <ul>
+                                <li><strong>Text Color</strong> - Change the color of selected text using the <i class="fas fa-font"></i> color picker</li>
+                                <li><strong>Highlight Color</strong> - Add a background highlight using the <i class="fas fa-highlighter"></i> color picker</li>
+                            </ul>
+                            <p>Click the color picker button, choose a color, and apply it to your selected text.</p>
+                        `
+                    },
+                    {
+                        title: 'Alignment',
+                        icon: 'fa-align-left',
+                        content: `
+                            <p>Control text alignment for better presentation:</p>
+                            <div class="docs-feature-grid">
+                                <div class="docs-feature-item">
+                                    <i class="fas fa-align-left"></i>
+                                    <span><strong>Left</strong> - Align to left margin (default)</span>
+                                </div>
+                                <div class="docs-feature-item">
+                                    <i class="fas fa-align-center"></i>
+                                    <span><strong>Center</strong> - Center text horizontally</span>
+                                </div>
+                                <div class="docs-feature-item">
+                                    <i class="fas fa-align-right"></i>
+                                    <span><strong>Right</strong> - Align to right margin</span>
+                                </div>
+                                <div class="docs-feature-item">
+                                    <i class="fas fa-align-justify"></i>
+                                    <span><strong>Justify</strong> - Stretch to fill full width</span>
+                                </div>
+                            </div>
+                        `
+                    },
+                    {
+                        title: 'Lists',
+                        icon: 'fa-list',
+                        content: `
+                            <p>Organize information with lists:</p>
+                            <ul>
+                                <li><strong>Bullet List</strong> <i class="fas fa-list-ul"></i> - Unordered list with bullet points</li>
+                                <li><strong>Numbered List</strong> <i class="fas fa-list-ol"></i> - Ordered list with numbers</li>
+                            </ul>
+                            <p>You can also use:</p>
+                            <ul>
+                                <li><strong>Increase Indent</strong> <i class="fas fa-indent"></i> - Nest items deeper</li>
+                                <li><strong>Decrease Indent</strong> <i class="fas fa-outdent"></i> - Move items back out</li>
+                            </ul>
+                        `
+                    }
+                ]
+            },
+            'documents': {
+                title: 'Documents & Saving',
+                icon: 'fa-file-alt',
+                intro: 'Learn how to manage your documents effectively.',
+                subsections: [
+                    {
+                        title: 'Saving Documents',
+                        icon: 'fa-save',
+                        content: `
+                            <p>Save your work to avoid losing changes:</p>
+                            <ul>
+                                <li><strong>Quick Save</strong>: Press <span class="docs-key">Ctrl</span> + <span class="docs-key">S</span></li>
+                                <li><strong>Save Button</strong>: Click the Save button in the header</li>
+                                <li><strong>File Menu</strong>: Go to File → Save Document</li>
+                            </ul>
+                            <div class="docs-tip">
+                                <div class="docs-tip-header"><i class="fas fa-lightbulb"></i> Pro Tip</div>
+                                <p>Enable Auto-Save in Settings to automatically save your work at regular intervals!</p>
+                            </div>
+                        `
+                    },
+                    {
+                        title: 'Opening Documents',
+                        icon: 'fa-folder-open',
+                        content: `
+                            <p>Access your saved documents from the sidebar:</p>
+                            <div class="docs-steps">
+                                <div class="docs-step">
+                                    <div class="docs-step-number"></div>
+                                    <div class="docs-step-content">
+                                        <h4>Find Your Document</h4>
+                                        <p>Look in the "Saved Documents" section of the sidebar.</p>
+                                    </div>
+                                </div>
+                                <div class="docs-step">
+                                    <div class="docs-step-number"></div>
+                                    <div class="docs-step-content">
+                                        <h4>Click to Open</h4>
+                                        <p>Click on the document name to load it into the editor.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <p>The current document will be highlighted in the sidebar.</p>
+                        `
+                    },
+                    {
+                        title: 'Creating New Documents',
+                        icon: 'fa-file-plus',
+                        content: `
+                            <p>Start fresh with a new document:</p>
+                            <ul>
+                                <li>Click the <strong>New Document</strong> button in the header</li>
+                                <li>Or go to <strong>File → New Document</strong></li>
+                            </ul>
+                            <div class="docs-warning">
+                                <div class="docs-warning-header"><i class="fas fa-exclamation-triangle"></i> Warning</div>
+                                <p>Make sure to save your current document before creating a new one!</p>
+                            </div>
+                        `
+                    },
+                    {
+                        title: 'Deleting Documents',
+                        icon: 'fa-trash',
+                        content: `
+                            <p>Remove documents you no longer need:</p>
+                            <ul>
+                                <li>Hover over a document in the sidebar</li>
+                                <li>Click the <i class="fas fa-times"></i> delete button that appears</li>
+                                <li>Or right-click and select "Delete"</li>
+                            </ul>
+                            <div class="docs-warning">
+                                <div class="docs-warning-header"><i class="fas fa-exclamation-triangle"></i> Warning</div>
+                                <p>Deleted documents cannot be recovered!</p>
+                            </div>
+                        `
+                    }
+                ]
+            },
+            'autosave': {
+                title: 'Auto-Save',
+                icon: 'fa-clock',
+                intro: 'Never lose your work again with the powerful auto-save feature.',
+                subsections: [
+                    {
+                        title: 'Enabling Auto-Save',
+                        icon: 'fa-toggle-on',
+                        content: `
+                            <p>Turn on auto-save to automatically save your work:</p>
+                            <div class="docs-steps">
+                                <div class="docs-step">
+                                    <div class="docs-step-number"></div>
+                                    <div class="docs-step-content">
+                                        <h4>Open Settings Menu</h4>
+                                        <p>Click on <strong>Settings</strong> in the header bar.</p>
+                                    </div>
+                                </div>
+                                <div class="docs-step">
+                                    <div class="docs-step-number"></div>
+                                    <div class="docs-step-content">
+                                        <h4>Toggle Auto-Save</h4>
+                                        <p>Click on "Auto Save" to enable or disable the feature.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="docs-tip">
+                                <div class="docs-tip-header"><i class="fas fa-lightbulb"></i> Note</div>
+                                <p>Auto-save is enabled by default for your convenience.</p>
+                            </div>
+                        `
+                    },
+                    {
+                        title: 'Configuring Auto-Save',
+                        icon: 'fa-sliders-h',
+                        content: `
+                            <p>Customize auto-save behavior in Advanced Settings:</p>
+                            <ul>
+                                <li><strong>Interval</strong> - Set how often auto-save triggers (time, words, or characters)</li>
+                                <li><strong>Auto-Save Limit</strong> - Maximum number of auto-saves to keep (default: 3)</li>
+                                <li><strong>Auto-Delete</strong> - Automatically delete old auto-saves after X days</li>
+                            </ul>
+                            <p>Access these options via <strong>Settings → Advanced Settings</strong>.</p>
+                        `
+                    },
+                    {
+                        title: 'Auto-Save vs Manual Save',
+                        icon: 'fa-exchange-alt',
+                        content: `
+                            <p>Understanding the difference:</p>
+                            <table class="docs-table">
+                                <tr>
+                                    <th>Feature</th>
+                                    <th>Auto-Save</th>
+                                    <th>Manual Save</th>
+                                </tr>
+                                <tr>
+                                    <td>Location</td>
+                                    <td>Auto-Saved Documents section</td>
+                                    <td>Saved Documents section</td>
+                                </tr>
+                                <tr>
+                                    <td>Retention</td>
+                                    <td>Limited by auto-save count</td>
+                                    <td>Kept until manually deleted</td>
+                                </tr>
+                                <tr>
+                                    <td>Auto-Delete</td>
+                                    <td>Can be auto-deleted</td>
+                                    <td>Never auto-deleted</td>
+                                </tr>
+                            </table>
+                            <p>When you manually save an auto-saved document, it's promoted to the Saved Documents section.</p>
+                        `
+                    }
+                ]
+            },
+            'flags': {
+                title: 'Document Flags',
+                icon: 'fa-flag',
+                intro: 'Organize and prioritize your documents with color-coded flags.',
+                subsections: [
+                    {
+                        title: 'Built-in Flags',
+                        icon: 'fa-palette',
+                        content: `
+                            <p>Use these preset flags to categorize your documents:</p>
+                            <div class="docs-feature-grid">
+                                <div class="docs-feature-item">
+                                    <span style="color:#ef4444"><i class="fas fa-flag"></i></span>
+                                    <span><strong>Red - Urgent</strong><br>Requires immediate attention</span>
+                                </div>
+                                <div class="docs-feature-item">
+                                    <span style="color:#f97316"><i class="fas fa-flag"></i></span>
+                                    <span><strong>Orange - Important</strong><br>High priority item</span>
+                                </div>
+                                <div class="docs-feature-item">
+                                    <span style="color:#eab308"><i class="fas fa-flag"></i></span>
+                                    <span><strong>Yellow - Review</strong><br>Needs to be checked</span>
+                                </div>
+                                <div class="docs-feature-item">
+                                    <span style="color:#22c55e"><i class="fas fa-flag"></i></span>
+                                    <span><strong>Green - Complete</strong><br>Finished and ready</span>
+                                </div>
+                                <div class="docs-feature-item">
+                                    <span style="color:#3b82f6"><i class="fas fa-flag"></i></span>
+                                    <span><strong>Blue - In Progress</strong><br>Currently being worked on</span>
+                                </div>
+                                <div class="docs-feature-item">
+                                    <span style="color:#a855f7"><i class="fas fa-flag"></i></span>
+                                    <span><strong>Purple - Ideas</strong><br>Brainstorming or concepts</span>
+                                </div>
+                            </div>
+                        `
+                    },
+                    {
+                        title: 'Setting a Flag',
+                        icon: 'fa-mouse-pointer',
+                        content: `
+                            <p>Apply a flag to your current document:</p>
+                            <div class="docs-steps">
+                                <div class="docs-step">
+                                    <div class="docs-step-number"></div>
+                                    <div class="docs-step-content">
+                                        <h4>Open View Menu</h4>
+                                        <p>Click on <strong>View</strong> in the header bar.</p>
+                                    </div>
+                                </div>
+                                <div class="docs-step">
+                                    <div class="docs-step-number"></div>
+                                    <div class="docs-step-content">
+                                        <h4>Hover Over Flags</h4>
+                                        <p>Hover over "Flags" to see the submenu.</p>
+                                    </div>
+                                </div>
+                                <div class="docs-step">
+                                    <div class="docs-step-number"></div>
+                                    <div class="docs-step-content">
+                                        <h4>Select a Flag</h4>
+                                        <p>Click on the desired flag color to apply it.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <p>When a flag is set, a colored border appears around the editor.</p>
+                        `
+                    },
+                    {
+                        title: 'Custom Flags',
+                        icon: 'fa-plus-circle',
+                        content: `
+                            <p>Create your own flags with custom colors and names:</p>
+                            <ul>
+                                <li>Go to <strong>View → Flags → Add Custom Flag</strong></li>
+                                <li>Enter a name for your flag (max 30 characters)</li>
+                                <li>Choose a color from presets or use the custom color picker</li>
+                                <li>Add a description (shown in tooltips, max 100 characters)</li>
+                                <li>Click <strong>Create Flag</strong></li>
+                            </ul>
+                            <div class="docs-tip">
+                                <div class="docs-tip-header"><i class="fas fa-lightbulb"></i> Tip</div>
+                                <p>Hover over any flag to see its description in a tooltip!</p>
+                            </div>
+                        `
+                    },
+                    {
+                        title: 'Flag Border Settings',
+                        icon: 'fa-border-style',
+                        content: `
+                            <p>Customize the flag border appearance:</p>
+                            <ul>
+                                <li><strong>Toggle Border</strong> - Enable or disable the colored border around the editor</li>
+                                <li><strong>Border Width</strong> - Adjust thickness from 1px to 10px</li>
+                            </ul>
+                            <p>Find these settings in <strong>Settings → Advanced Settings → Document Flags</strong>.</p>
+                            <div class="docs-tip">
+                                <div class="docs-tip-header"><i class="fas fa-lightbulb"></i> Note</div>
+                                <p>Even if the border is disabled, the flag name will still show in the status bar (if enabled in Customize Editor).</p>
+                            </div>
+                        `
+                    }
+                ]
+            },
+            'themes': {
+                title: 'Themes & Appearance',
+                icon: 'fa-palette',
+                intro: 'Customize the look and feel of the editor to match your preferences.',
+                subsections: [
+                    {
+                        title: 'Light / Theme / Dark Mode',
+                        icon: 'fa-sun',
+                        content: `
+                            <p>Switch between display modes using the toggle in the header:</p>
+                            <div class="docs-feature-grid">
+                                <div class="docs-feature-item">
+                                    <i class="fas fa-sun"></i>
+                                    <span><strong>Light Mode</strong><br>Bright interface, easy on eyes during the day</span>
+                                </div>
+                                <div class="docs-feature-item">
+                                    <i class="fas fa-palette"></i>
+                                    <span><strong>Theme Mode</strong><br>Uses your selected color theme</span>
+                                </div>
+                                <div class="docs-feature-item">
+                                    <i class="fas fa-moon"></i>
+                                    <span><strong>Dark Mode</strong><br>Dark interface, reduces eye strain at night</span>
+                                </div>
+                            </div>
+                            <p>Click on the icons in the toggle to switch modes.</p>
+                        `
+                    },
+                    {
+                        title: 'Selecting a Theme',
+                        icon: 'fa-swatchbook',
+                        content: `
+                            <p>Choose from a variety of beautiful themes:</p>
+                            <div class="docs-steps">
+                                <div class="docs-step">
+                                    <div class="docs-step-number"></div>
+                                    <div class="docs-step-content">
+                                        <h4>Open Theme Modal</h4>
+                                        <p>Go to <strong>View → Theme</strong>.</p>
+                                    </div>
+                                </div>
+                                <div class="docs-step">
+                                    <div class="docs-step-number"></div>
+                                    <div class="docs-step-content">
+                                        <h4>Browse Themes</h4>
+                                        <p>View basic themes or switch to the "Animated" tab for dynamic themes.</p>
+                                    </div>
+                                </div>
+                                <div class="docs-step">
+                                    <div class="docs-step-number"></div>
+                                    <div class="docs-step-content">
+                                        <h4>Preview & Save</h4>
+                                        <p>Click a theme to preview it live. Click "Save" to keep your selection.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `
+                    },
+                    {
+                        title: 'Animated Themes',
+                        icon: 'fa-magic',
+                        content: `
+                            <p>Experience dynamic, animated themes:</p>
+                            <ul>
+                                <li><strong>Aurora</strong> - Northern lights effect</li>
+                                <li><strong>Ocean Wave</strong> - Flowing water animations</li>
+                                <li><strong>Sunset Glow</strong> - Warm gradient transitions</li>
+                                <li><strong>Neon Pulse</strong> - Cyberpunk-style glowing effects</li>
+                                <li><strong>Galaxy</strong> - Twinkling stars in space</li>
+                                <li><strong>Forest</strong> - Nature-inspired with sunbeams</li>
+                                <li><strong>Candy Swirl</strong> - Playful pink gradients</li>
+                            </ul>
+                            <div class="docs-tip">
+                                <div class="docs-tip-header"><i class="fas fa-lightbulb"></i> Customization</div>
+                                <p>Right-click any animated theme to customize its animation speed, intensity, and other effects!</p>
+                            </div>
+                        `
+                    }
+                ]
+            },
+            'toolbar': {
+                title: 'Toolbar Customization',
+                icon: 'fa-tools',
+                intro: 'Show or hide toolbar buttons to create your perfect editing environment.',
+                subsections: [
+                    {
+                        title: 'Customizing the Toolbar',
+                        icon: 'fa-cog',
+                        content: `
+                            <p>Access toolbar customization:</p>
+                            <ul>
+                                <li>Go to <strong>View → Customize Toolbar</strong></li>
+                                <li>Toggle individual tools on or off</li>
+                                <li>Use "Toggle All" to enable/disable everything at once</li>
+                                <li>Click "Save" to apply changes</li>
+                            </ul>
+                            <div class="docs-tip">
+                                <div class="docs-tip-header"><i class="fas fa-lightbulb"></i> Tip</div>
+                                <p>Some tools like Subscript and Superscript are disabled by default. Enable them here if needed!</p>
+                            </div>
+                        `
+                    },
+                    {
+                        title: 'Available Tools',
+                        icon: 'fa-th-list',
+                        content: `
+                            <p>Tools you can enable or disable:</p>
+                            <ul>
+                                <li><strong>History</strong>: Undo, Redo</li>
+                                <li><strong>Text Formatting</strong>: Bold, Italic, Underline, Strikethrough, Subscript, Superscript</li>
+                                <li><strong>Paragraph</strong>: Format, Font Family, Font Size</li>
+                                <li><strong>Colors</strong>: Text Color, Highlight Color</li>
+                                <li><strong>Alignment</strong>: Left, Center, Right, Justify</li>
+                                <li><strong>Lists</strong>: Bullet List, Numbered List, Indent, Outdent</li>
+                                <li><strong>Insert</strong>: Link, Image, Table, Horizontal Line</li>
+                                <li><strong>Utility</strong>: Clear Formatting, Spell Check</li>
+                            </ul>
+                        `
+                    }
+                ]
+            },
+            'spellcheck': {
+                title: 'Spell Check & Autocorrect',
+                icon: 'fa-spell-check',
+                intro: 'Catch typos and improve your writing with built-in spelling tools.',
+                subsections: [
+                    {
+                        title: 'Enabling Spell Check',
+                        icon: 'fa-toggle-on',
+                        content: `
+                            <p>Turn on spell checking:</p>
+                            <ul>
+                                <li>Click the <i class="fas fa-spell-check"></i> button in the toolbar</li>
+                                <li>Open the dropdown to access spell check options</li>
+                                <li>Toggle "Spell Check" to enable/disable</li>
+                            </ul>
+                            <p>Misspelled words will be underlined in red.</p>
+                        `
+                    },
+                    {
+                        title: 'Autocorrect',
+                        icon: 'fa-magic',
+                        content: `
+                            <p>Automatically fix common typos:</p>
+                            <ul>
+                                <li>Enable "Auto-Correct" in the spell check dropdown</li>
+                                <li>Common mistakes are fixed as you type</li>
+                                <li>A popup shows corrections - click ✓ to accept or ✕ to dismiss</li>
+                            </ul>
+                            <div class="docs-tip">
+                                <div class="docs-tip-header"><i class="fas fa-lightbulb"></i> Built-in Rules</div>
+                                <p>Common corrections include: teh → the, dont → don't, cant → can't, and many more!</p>
+                            </div>
+                        `
+                    },
+                    {
+                        title: 'Custom Dictionary',
+                        icon: 'fa-book',
+                        content: `
+                            <p>Manage your personal dictionary and autocorrect rules:</p>
+                            <ul>
+                                <li>Click "Manage Dictionary" in the spell check dropdown</li>
+                                <li>Add words to your custom dictionary</li>
+                                <li>Create custom autocorrect rules (e.g., "btw" → "by the way")</li>
+                                <li>Remove entries you no longer need</li>
+                            </ul>
+                        `
+                    }
+                ]
+            },
+            'folders': {
+                title: 'Folders & Organization',
+                icon: 'fa-folder',
+                intro: 'Keep your documents organized with folders.',
+                subsections: [
+                    {
+                        title: 'Creating Folders',
+                        icon: 'fa-folder-plus',
+                        content: `
+                            <p>Create folders to organize your documents:</p>
+                            <div class="docs-steps">
+                                <div class="docs-step">
+                                    <div class="docs-step-number"></div>
+                                    <div class="docs-step-content">
+                                        <h4>Click the + Button</h4>
+                                        <p>In the sidebar header, click the <i class="fas fa-plus"></i> button.</p>
+                                    </div>
+                                </div>
+                                <div class="docs-step">
+                                    <div class="docs-step-number"></div>
+                                    <div class="docs-step-content">
+                                        <h4>Select "New Folder"</h4>
+                                        <p>Choose "New Folder" from the context menu.</p>
+                                    </div>
+                                </div>
+                                <div class="docs-step">
+                                    <div class="docs-step-number"></div>
+                                    <div class="docs-step-content">
+                                        <h4>Name Your Folder</h4>
+                                        <p>Enter a name and click "Create".</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `
+                    },
+                    {
+                        title: 'Moving Documents to Folders',
+                        icon: 'fa-arrows-alt',
+                        content: `
+                            <p>Move documents into folders:</p>
+                            <ul>
+                                <li>Right-click on a document in the sidebar</li>
+                                <li>Select "Move To..."</li>
+                                <li>Choose the destination folder</li>
+                            </ul>
+                            <p>Documents in folders won't appear in the main document list.</p>
+                        `
+                    },
+                    {
+                        title: 'Opening Folders',
+                        icon: 'fa-folder-open',
+                        content: `
+                            <p>Access documents inside folders:</p>
+                            <ul>
+                                <li>Double-click on a folder to open it</li>
+                                <li>The sidebar shows only documents in that folder</li>
+                                <li>Click the "Back" button to return to the main view</li>
+                            </ul>
+                        `
+                    }
+                ]
+            },
+            'advanced': {
+                title: 'Advanced Settings',
+                icon: 'fa-cog',
+                intro: 'Fine-tune the editor with advanced configuration options.',
+                subsections: [
+                    {
+                        title: 'Accessing Advanced Settings',
+                        icon: 'fa-sliders-h',
+                        content: `
+                            <p>Open the Advanced Settings modal:</p>
+                            <ul>
+                                <li>Go to <strong>Settings → Advanced Settings</strong></li>
+                            </ul>
+                            <p>Here you'll find detailed configuration for auto-save, flags, notifications, and more.</p>
+                        `
+                    },
+                    {
+                        title: 'Modal Behavior',
+                        icon: 'fa-window-restore',
+                        content: `
+                            <p>Customize how modals behave:</p>
+                            <ul>
+                                <li><strong>Click Outside Action</strong> - What happens when you click outside a modal:
+                                    <ul>
+                                        <li>Do Nothing</li>
+                                        <li>Close and Cancel</li>
+                                        <li>Close and Save</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Save Behavior</strong> - Whether clicking "Save" also closes the modal</li>
+                            </ul>
+                        `
+                    },
+                    {
+                        title: 'Default Load Action',
+                        icon: 'fa-play',
+                        content: `
+                            <p>Choose what happens when you open the editor:</p>
+                            <ul>
+                                <li><strong>Load New Document</strong> - Start with a blank document</li>
+                                <li><strong>Load Last Saved</strong> - Open your most recent saved document</li>
+                                <li><strong>Load Last Auto-Save</strong> - Open your most recent auto-save</li>
+                                <li><strong>Show Warnings</strong> - Show any auto-saves about to be deleted</li>
+                                <li><strong>Do Nothing</strong> - Show only the header (clean state)</li>
+                            </ul>
+                        `
+                    },
+                    {
+                        title: 'Toast Notifications',
+                        icon: 'fa-bell',
+                        content: `
+                            <p>Control which notifications appear:</p>
+                            <ul>
+                                <li>Click "Toast Settings" in Advanced Settings</li>
+                                <li>Enable/disable the master toggle for all notifications</li>
+                                <li>Toggle individual notification types:
+                                    <ul>
+                                        <li>Auto-save notifications</li>
+                                        <li>Document saved</li>
+                                        <li>Document deleted</li>
+                                        <li>Theme changes</li>
+                                        <li>Settings changes</li>
+                                        <li>Spell check</li>
+                                        <li>Document bar</li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        `
+                    },
+                    {
+                        title: 'Reset to Defaults',
+                        icon: 'fa-undo-alt',
+                        content: `
+                            <p>Start fresh by resetting all data:</p>
+                            <ul>
+                                <li>Click the <i class="fas fa-undo-alt"></i> Reset button in the header</li>
+                                <li>Review what will be deleted</li>
+                                <li>Click "Learn More" to see the full list of affected data</li>
+                                <li>Confirm to reset everything</li>
+                            </ul>
+                            <div class="docs-warning">
+                                <div class="docs-warning-header"><i class="fas fa-exclamation-triangle"></i> Warning</div>
+                                <p>This action cannot be undone! All documents, settings, and customizations will be lost.</p>
+                            </div>
+                        `
+                    }
+                ]
+            },
+            'shortcuts': {
+                title: 'Keyboard Shortcuts',
+                icon: 'fa-keyboard',
+                intro: 'Speed up your workflow with these keyboard shortcuts.',
+                subsections: [
+                    {
+                        title: 'Essential Shortcuts',
+                        icon: 'fa-star',
+                        content: `
+                            <table class="docs-table">
+                                <tr>
+                                    <th>Shortcut</th>
+                                    <th>Action</th>
+                                </tr>
+                                <tr>
+                                    <td><span class="docs-key">Ctrl</span> + <span class="docs-key">S</span></td>
+                                    <td>Save document</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="docs-key">Ctrl</span> + <span class="docs-key">Z</span></td>
+                                    <td>Undo</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="docs-key">Ctrl</span> + <span class="docs-key">Y</span></td>
+                                    <td>Redo</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="docs-key">Ctrl</span> + <span class="docs-key">A</span></td>
+                                    <td>Select all</td>
+                                </tr>
+                            </table>
+                        `
+                    },
+                    {
+                        title: 'Formatting Shortcuts',
+                        icon: 'fa-font',
+                        content: `
+                            <table class="docs-table">
+                                <tr>
+                                    <th>Shortcut</th>
+                                    <th>Action</th>
+                                </tr>
+                                <tr>
+                                    <td><span class="docs-key">Ctrl</span> + <span class="docs-key">B</span></td>
+                                    <td>Bold</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="docs-key">Ctrl</span> + <span class="docs-key">I</span></td>
+                                    <td>Italic</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="docs-key">Ctrl</span> + <span class="docs-key">U</span></td>
+                                    <td>Underline</td>
+                                </tr>
+                            </table>
+                        `
+                    },
+                    {
+                        title: 'Clipboard Shortcuts',
+                        icon: 'fa-clipboard',
+                        content: `
+                            <table class="docs-table">
+                                <tr>
+                                    <th>Shortcut</th>
+                                    <th>Action</th>
+                                </tr>
+                                <tr>
+                                    <td><span class="docs-key">Ctrl</span> + <span class="docs-key">C</span></td>
+                                    <td>Copy</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="docs-key">Ctrl</span> + <span class="docs-key">X</span></td>
+                                    <td>Cut</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="docs-key">Ctrl</span> + <span class="docs-key">V</span></td>
+                                    <td>Paste</td>
+                                </tr>
+                            </table>
+                        `
+                    }
+                ]
+            }
+        };
+    }
+
+    populateDocsContent() {
+        const content = document.getElementById('docsContent');
+        const docsData = this.getDocsContent();
+
+        let html = '';
+        for (const [sectionId, section] of Object.entries(docsData)) {
+            html += `
+                <div class="docs-section" id="docs-${sectionId}">
+                    <h2><i class="fas ${section.icon}"></i> ${section.title}</h2>
+                    <p class="docs-section-intro">${section.intro}</p>
+            `;
+
+            for (const subsection of section.subsections) {
+                html += `
+                    <div class="docs-subsection">
+                        <h3><i class="fas ${subsection.icon}"></i> ${subsection.title}</h3>
+                        ${subsection.content}
+                    </div>
+                `;
+            }
+
+            html += '</div>';
+        }
+
+        content.innerHTML = html;
+    }
+
+    searchDocs(query) {
+        const docsContent = document.getElementById('docsContent');
+        const docsData = this.getDocsContent();
+
+        if (!query.trim()) {
+            // Show default section
+            this.populateDocsContent();
+            this.showDocsSection('getting-started');
+            return;
+        }
+
+        const lowerQuery = query.toLowerCase();
+        const results = [];
+
+        // Search through all documentation
+        for (const [sectionId, section] of Object.entries(docsData)) {
+            for (const subsection of section.subsections) {
+                const titleMatch = subsection.title.toLowerCase().includes(lowerQuery);
+                const contentMatch = subsection.content.toLowerCase().includes(lowerQuery);
+
+                if (titleMatch || contentMatch) {
+                    // Extract preview text
+                    let preview = '';
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = subsection.content;
+                    const text = tempDiv.textContent || tempDiv.innerText;
+                    const index = text.toLowerCase().indexOf(lowerQuery);
+                    if (index > -1) {
+                        const start = Math.max(0, index - 40);
+                        const end = Math.min(text.length, index + query.length + 60);
+                        preview = (start > 0 ? '...' : '') +
+                                  text.slice(start, end).replace(
+                                      new RegExp(query, 'gi'),
+                                      match => `<mark>${match}</mark>`
+                                  ) +
+                                  (end < text.length ? '...' : '');
+                    }
+
+                    results.push({
+                        sectionId,
+                        sectionTitle: section.title,
+                        title: subsection.title,
+                        preview
+                    });
+                }
+            }
+        }
+
+        // Display results
+        if (results.length > 0) {
+            let html = `<div class="docs-search-results">
+                <h3>Found ${results.length} result${results.length > 1 ? 's' : ''} for "${query}"</h3>`;
+
+            for (const result of results) {
+                html += `
+                    <div class="docs-search-result" data-section="${result.sectionId}">
+                        <div class="docs-search-result-title">${result.title}</div>
+                        <div class="docs-search-result-section"><i class="fas fa-folder"></i> ${result.sectionTitle}</div>
+                        <div class="docs-search-result-preview">${result.preview}</div>
+                    </div>
+                `;
+            }
+
+            html += '</div>';
+            docsContent.innerHTML = html;
+
+            // Add click handlers
+            docsContent.querySelectorAll('.docs-search-result').forEach(el => {
+                el.addEventListener('click', () => {
+                    document.getElementById('docsSearchInput').value = '';
+                    this.populateDocsContent();
+                    this.showDocsSection(el.dataset.section);
+                });
+            });
+        } else {
+            docsContent.innerHTML = `
+                <div class="docs-no-results">
+                    <i class="fas fa-search"></i>
+                    <p>No results found for "${query}"</p>
+                </div>
+            `;
+        }
+
+        // Deselect all nav items
+        document.querySelectorAll('.docs-nav-header').forEach(btn => {
+            btn.classList.remove('active');
+        });
     }
 
     // ==================== Folders ====================

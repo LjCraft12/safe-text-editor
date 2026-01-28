@@ -1,4 +1,4 @@
-# WYSIWYG Editor - Feature Ideas
+# Safe Text Editor - Feature Ideas
 
 ## 📝 Document Management
 
@@ -279,9 +279,10 @@
 - **Flag Border Toggle** - Enable/disable flag border around editor (status bar flag still shows)
 - **Toast Notification Settings** - Enable/disable specific notification types
 - **Modal Click Outside Behavior** - Configure what happens when clicking outside modals
-- **Modal Save Behavior** - "Save and Close" vs "Save Only" modes
+- **Modal Save Behavior** - "Save and Close" vs "Save Only" modes (keeps modals open when saving)
 - **Default Load Action** - Choose what happens when app starts (new doc, last saved, last autosave, etc.)
 - **Customize Editor Modal** - Toggle visibility of status bar elements (word count, character count, flag, reading time)
+- **Customize Toolbar Modal** - Enable/disable individual toolbar buttons (bold, italic, underline, lists, colors, etc.)
 - **Tiered Reset System** - Simple confirmation + detailed "Learn More" view of all data to be deleted
 
 ### Flags & Organization
@@ -295,12 +296,25 @@
 - **Toast Notifications** - Configurable popup notifications for actions
 - **Status Bar** - Word count, character count, flag status, estimated reading time
 - **Customizable Status Bar** - Toggle individual status bar elements on/off
+- **Customizable Toolbar** - Show/hide individual formatting buttons
 - **Estimated Reading Time** - Dynamic reading time calculation in status bar
 - **Keyboard Shortcuts** - Ctrl+S (Save), Ctrl+Z (Undo), Ctrl+Y (Redo), Ctrl+B/I/U (formatting)
 - **Reset All Data** - Clear everything with tiered confirmation modal
 - **Close Editor** - Hide editor and show "no document" state
 - **Theme Tooltips** - Hover for theme info, colors, and animation details
 - **Unsaved Changes Warning** - Modal prompts when closing with unsaved changes (including custom flag creator)
+
+### Help & Documentation
+- **Help Menu** - Quick access to Documentation and About
+- **Interactive Documentation Modal** - Comprehensive, searchable help system with:
+  - Sidebar navigation with 12 sections
+  - Detailed guides for all features
+  - Step-by-step instructions
+  - Keyboard shortcut references
+  - Tips and warnings
+  - Feature grids and tables
+  - Live search functionality
+- **About Modal** - App info with version and feature highlights
 
 ---
 
