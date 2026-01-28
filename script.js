@@ -111,9 +111,6 @@ class WYSIWYGEditor {
     }
 
     init() {
-        console.log('WYSIWYGEditor init() started');
-        console.log('defaultLoadAction:', this.defaultLoadAction);
-
         try {
             this.initThemes();
             this.initSidebar();
@@ -3307,7 +3304,6 @@ class WYSIWYGEditor {
     }
 
     handleDefaultLoadAction() {
-        console.log('handleDefaultLoadAction called with action:', this.defaultLoadAction);
         const action = this.defaultLoadAction || 'newDocument';
 
         switch (action) {
@@ -3442,6 +3438,29 @@ class WYSIWYGEditor {
                 item.classList.add('active');
             }
         });
+    }
+
+    updateFlagStatusBar() {
+        const flagStatus = document.getElementById('flagStatus');
+        if (!flagStatus) return;
+
+        // Remove all flag classes
+        flagStatus.classList.remove('flag-red', 'flag-orange', 'flag-yellow', 'flag-green', 'flag-blue', 'flag-purple');
+
+        if (this.currentFlag && this.currentFlag !== 'none') {
+            const flagNames = {
+                'red': 'Urgent',
+                'orange': 'Important',
+                'yellow': 'Review',
+                'green': 'Complete',
+                'blue': 'In Progress',
+                'purple': 'Ideas'
+            };
+            flagStatus.textContent = flagNames[this.currentFlag] || '';
+            flagStatus.classList.add(`flag-${this.currentFlag}`);
+        } else {
+            flagStatus.textContent = '';
+        }
     }
 
     closeAllDropdowns() {
@@ -4273,11 +4292,5 @@ ${content}
 
 // Initialize the editor when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOMContentLoaded - Creating WYSIWYGEditor');
-    try {
-        window.editor = new WYSIWYGEditor();
-        console.log('WYSIWYGEditor created successfully');
-    } catch (error) {
-        console.error('Error creating WYSIWYGEditor:', error);
-    }
+    window.editor = new WYSIWYGEditor();
 });
