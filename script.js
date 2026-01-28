@@ -75,6 +75,10 @@ class WYSIWYGEditor {
         this.defaultLoadAction = this.loadDefaultLoadAction();
         this.editorClosed = false;
 
+        // Animated theme customization
+        this.animatedThemeSettings = this.loadAnimatedThemeSettings();
+        this.currentCustomizingTheme = null;
+
         this.init();
     }
 
@@ -113,6 +117,7 @@ class WYSIWYGEditor {
     init() {
         try {
             this.initThemes();
+            this.initAnimatedThemeCustomization();
             this.initSidebar();
             this.initSpellcheckAutocorrect();
             this.initResetModal();
@@ -137,6 +142,7 @@ class WYSIWYGEditor {
             this.renderFolderList();
             this.updateCounts();
             this.updateFlagStatusBar();
+            this.applyAnimatedThemeCustomizations();
         } catch (error) {
             console.error('Error during initialization:', error);
         }
@@ -728,8 +734,29 @@ class WYSIWYGEditor {
         // Initialize tab behavior
         this.initThemeTabs();
 
+        // Switch to appropriate tab based on current theme type
+        this.selectThemeTabForCurrentTheme();
+
         // Show modal
         document.getElementById('themeModal').classList.add('show');
+    }
+
+    selectThemeTabForCurrentTheme() {
+        const isAnimated = this.getAnimatedThemes().some(t => t.id === this.currentTheme);
+        const tabs = document.querySelectorAll('.theme-tab');
+        const contents = document.querySelectorAll('.theme-tab-content');
+
+        const targetTab = isAnimated ? 'animated' : 'basic';
+
+        // Update active tab
+        tabs.forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.tab === targetTab);
+        });
+
+        // Update active content
+        contents.forEach(c => {
+            c.classList.toggle('active', c.id === `${targetTab}Themes`);
+        });
     }
 
     initThemeTabs() {
@@ -787,9 +814,12 @@ class WYSIWYGEditor {
         if (!grid) return;
 
         const themes = this.getAnimatedThemes();
-        grid.innerHTML = themes.map(theme => `
-            <div class="theme-card animated ${theme.id === this.previewTheme ? 'selected' : ''}" data-theme-id="${theme.id}" data-animated="true">
+        grid.innerHTML = themes.map(theme => {
+            const isEdited = this.isThemeCustomized(theme.id);
+            return `
+            <div class="theme-card animated ${theme.id === this.previewTheme ? 'selected' : ''} ${isEdited ? 'edited' : ''}" data-theme-id="${theme.id}" data-animated="true">
                 <div class="theme-card-check"><i class="fas fa-check"></i></div>
+                <div class="theme-card-edited" title="Customized"><i class="fas fa-pen"></i></div>
                 <div class="theme-card-preview ${theme.cssClass}" style="background: ${theme.colors.bg}">
                     <div class="theme-preview-header" style="background: ${theme.colors.white}; border-bottom: 1px solid ${theme.colors.border}">
                         <span class="theme-preview-dot" style="background: #ef4444"></span>
@@ -806,10 +836,25 @@ class WYSIWYGEditor {
                 </div>
                 <div class="theme-card-name"><i class="fas fa-sparkles"></i> ${theme.name}</div>
             </div>
-        `).join('');
+        `}).join('');
 
         // Bind click events
         this.bindThemeCardClicks(grid);
+    }
+
+    isThemeCustomized(themeId) {
+        const defaults = this.getAnimatedThemeDefaults()[themeId];
+        const current = this.animatedThemeSettings[themeId];
+
+        if (!defaults || !current) return false;
+
+        // Compare each setting to its default
+        for (const key of Object.keys(defaults)) {
+            if (current[key] !== defaults[key]) {
+                return true;
+            }
+        }
+        return false;
     }
 
     bindThemeCardClicks(grid) {
@@ -852,6 +897,21 @@ class WYSIWYGEditor {
                 }
                 this.hideThemeTooltip();
             });
+
+            // Right-click to customize animated themes
+            card.addEventListener('contextmenu', (e) => {
+                const isAnimated = card.dataset.animated === 'true';
+                if (isAnimated) {
+                    e.preventDefault();
+                    const themeId = card.dataset.themeId;
+                    this.hideThemeTooltip();
+                    if (tooltipTimer) {
+                        clearTimeout(tooltipTimer);
+                        tooltipTimer = null;
+                    }
+                    this.openAnimatedThemeCustomization(themeId);
+                }
+            });
         });
     }
 
@@ -869,6 +929,7 @@ class WYSIWYGEditor {
         const descEl = document.getElementById('tooltipDescription');
         const animEl = document.getElementById('tooltipAnimation');
         const animTextEl = document.getElementById('tooltipAnimationText');
+        const customizeHint = document.getElementById('tooltipCustomizeHint');
 
         // Set theme name
         nameEl.textContent = theme.name;
@@ -890,8 +951,16 @@ class WYSIWYGEditor {
         if (theme.animated && theme.animationDescription) {
             animEl.style.display = 'flex';
             animTextEl.textContent = theme.animationDescription;
+            // Show customize hint for animated themes
+            if (customizeHint) {
+                customizeHint.style.display = 'flex';
+            }
         } else {
             animEl.style.display = 'none';
+            // Hide customize hint for non-animated themes
+            if (customizeHint) {
+                customizeHint.style.display = 'none';
+            }
         }
 
         // Position and show tooltip
@@ -978,6 +1047,8 @@ class WYSIWYGEditor {
         // Apply animated theme class if applicable
         if (theme.animated && theme.cssClass) {
             root.classList.add('animated-theme', theme.cssClass);
+            // Apply any custom animation settings for this theme
+            this.applyAnimatedThemeCustomizations();
         }
     }
 
@@ -1008,6 +1079,517 @@ class WYSIWYGEditor {
         // Close modal
         document.getElementById('themeModal').classList.remove('show');
         this.showNotification('Theme saved!', 'theme');
+    }
+
+    // ==================== Animated Theme Customization ====================
+
+    getAnimatedThemeDefaults() {
+        return {
+            'aurora': {
+                animationSpeed: 15,
+                glowIntensity: 30,
+                colorShiftRange: 100,
+                pulseSpeed: 4
+            },
+            'ocean-wave': {
+                waveSpeed: 8,
+                waveHeight: 3,
+                depthIntensity: 50,
+                bubbleAmount: 50
+            },
+            'sunset-glow': {
+                glowSpeed: 8,
+                glowIntensity: 60,
+                horizonBrightness: 50,
+                colorWarmth: 70
+            },
+            'neon-pulse': {
+                pulseSpeed: 2,
+                glowIntensity: 80,
+                flowSpeed: 3,
+                borderGlow: 60
+            },
+            'enchanted-forest': {
+                sunbeamSpeed: 7,
+                sunbeamIntensity: 50,
+                mistDensity: 40,
+                mistSpeed: 5
+            },
+            'galaxy': {
+                starCount: 50,
+                twinkleSpeed: 3,
+                starBrightness: 70,
+                nebulaIntensity: 40,
+                coloredStars: true
+            },
+            'candy': {
+                swirlSpeed: 6,
+                bubbleCount: 50,
+                shimmerSpeed: 3,
+                colorIntensity: 70
+            }
+        };
+    }
+
+    getAnimatedThemeCustomizableSettings() {
+        return {
+            'aurora': {
+                title: 'Aurora Borealis',
+                icon: 'fa-moon',
+                settings: [
+                    { id: 'animationSpeed', label: 'Animation Speed', type: 'slider', min: 5, max: 30, unit: 's', description: 'Speed of the aurora color shift', invert: true },
+                    { id: 'glowIntensity', label: 'Glow Intensity', type: 'slider', min: 10, max: 60, unit: 'px', description: 'Intensity of the sidebar glow effect' },
+                    { id: 'colorShiftRange', label: 'Color Shift Range', type: 'slider', min: 50, max: 200, unit: '%', description: 'How far the gradient shifts' },
+                    { id: 'pulseSpeed', label: 'Pulse Speed', type: 'slider', min: 2, max: 10, unit: 's', description: 'Speed of the pulse animation', invert: true }
+                ]
+            },
+            'ocean-wave': {
+                title: 'Ocean Wave',
+                icon: 'fa-water',
+                settings: [
+                    { id: 'waveSpeed', label: 'Wave Speed', type: 'slider', min: 4, max: 20, unit: 's', description: 'Speed of the wave animation', invert: true },
+                    { id: 'waveHeight', label: 'Wave Height', type: 'slider', min: 1, max: 10, unit: 'px', description: 'Height of the wave effect' },
+                    { id: 'depthIntensity', label: 'Depth Effect', type: 'slider', min: 10, max: 100, unit: '%', description: 'Intensity of the underwater depth effect' },
+                    { id: 'bubbleAmount', label: 'Bubble Amount', type: 'slider', min: 10, max: 100, unit: '%', description: 'Amount of bubble effects' }
+                ]
+            },
+            'sunset-glow': {
+                title: 'Sunset Glow',
+                icon: 'fa-sun',
+                settings: [
+                    { id: 'glowSpeed', label: 'Glow Speed', type: 'slider', min: 4, max: 16, unit: 's', description: 'Speed of the glowing animation', invert: true },
+                    { id: 'glowIntensity', label: 'Glow Intensity', type: 'slider', min: 20, max: 100, unit: '%', description: 'Brightness of the sunset glow' },
+                    { id: 'horizonBrightness', label: 'Horizon Brightness', type: 'slider', min: 20, max: 100, unit: '%', description: 'Brightness of the horizon glow' },
+                    { id: 'colorWarmth', label: 'Color Warmth', type: 'slider', min: 30, max: 100, unit: '%', description: 'Warmth of the sunset colors' }
+                ]
+            },
+            'neon-pulse': {
+                title: 'Neon Pulse',
+                icon: 'fa-bolt',
+                settings: [
+                    { id: 'pulseSpeed', label: 'Pulse Speed', type: 'slider', min: 1, max: 5, unit: 's', description: 'Speed of the neon pulse', invert: true },
+                    { id: 'glowIntensity', label: 'Glow Intensity', type: 'slider', min: 30, max: 100, unit: '%', description: 'Brightness of the neon glow' },
+                    { id: 'flowSpeed', label: 'Flow Speed', type: 'slider', min: 1, max: 8, unit: 's', description: 'Speed of the flowing colors', invert: true },
+                    { id: 'borderGlow', label: 'Border Glow', type: 'slider', min: 20, max: 100, unit: '%', description: 'Intensity of border glow effects' }
+                ]
+            },
+            'enchanted-forest': {
+                title: 'Enchanted Forest',
+                icon: 'fa-tree',
+                settings: [
+                    { id: 'sunbeamSpeed', label: 'Sunbeam Speed', type: 'slider', min: 3, max: 15, unit: 's', description: 'Speed of sunbeam movement', invert: true },
+                    { id: 'sunbeamIntensity', label: 'Sunbeam Intensity', type: 'slider', min: 20, max: 100, unit: '%', description: 'Brightness of sunbeams' },
+                    { id: 'mistDensity', label: 'Mist Density', type: 'slider', min: 10, max: 80, unit: '%', description: 'Thickness of the forest mist' },
+                    { id: 'mistSpeed', label: 'Mist Speed', type: 'slider', min: 2, max: 12, unit: 's', description: 'Speed of mist animation', invert: true }
+                ]
+            },
+            'galaxy': {
+                title: 'Galaxy Spiral',
+                icon: 'fa-star',
+                settings: [
+                    { id: 'starCount', label: 'Star Density', type: 'slider', min: 10, max: 2000, unit: ' stars', description: 'Number of visible stars (per layer)' },
+                    { id: 'twinkleSpeed', label: 'Twinkle Speed', type: 'slider', min: 1, max: 8, unit: 's', description: 'Speed of star twinkling', invert: true },
+                    { id: 'starBrightness', label: 'Star Brightness', type: 'slider', min: 30, max: 100, unit: '%', description: 'Overall brightness of stars' },
+                    { id: 'nebulaIntensity', label: 'Nebula Intensity', type: 'slider', min: 10, max: 80, unit: '%', description: 'Visibility of purple nebula effect' },
+                    { id: 'coloredStars', label: 'Colored Stars', type: 'toggle', description: 'Include purple and blue tinted stars' }
+                ]
+            },
+            'candy': {
+                title: 'Candy Swirl',
+                icon: 'fa-candy-cane',
+                settings: [
+                    { id: 'swirlSpeed', label: 'Swirl Speed', type: 'slider', min: 3, max: 12, unit: 's', description: 'Speed of the swirling colors', invert: true },
+                    { id: 'bubbleCount', label: 'Bubble Amount', type: 'slider', min: 10, max: 100, unit: '%', description: 'Amount of floating bubbles' },
+                    { id: 'shimmerSpeed', label: 'Shimmer Speed', type: 'slider', min: 1, max: 6, unit: 's', description: 'Speed of the toolbar shimmer', invert: true },
+                    { id: 'colorIntensity', label: 'Color Intensity', type: 'slider', min: 30, max: 100, unit: '%', description: 'Vibrancy of candy colors' }
+                ]
+            }
+        };
+    }
+
+    loadAnimatedThemeSettings() {
+        const saved = localStorage.getItem('wysiwyg_animated_theme_settings');
+        if (saved) {
+            return JSON.parse(saved);
+        }
+        return this.getAnimatedThemeDefaults();
+    }
+
+    saveAnimatedThemeSettings() {
+        localStorage.setItem('wysiwyg_animated_theme_settings', JSON.stringify(this.animatedThemeSettings));
+    }
+
+    initAnimatedThemeCustomization() {
+        const modal = document.getElementById('animatedThemeCustomizeModal');
+        const closeBtn = document.getElementById('animatedThemeCustomizeClose');
+        const cancelBtn = document.getElementById('animatedThemeCustomizeCancelBtn');
+        const saveBtn = document.getElementById('animatedThemeCustomizeSaveBtn');
+        const resetBtn = document.getElementById('resetThemeDefaultsBtn');
+
+        if (!modal) return;
+
+        closeBtn?.addEventListener('click', () => this.closeAnimatedThemeCustomization(false));
+        cancelBtn?.addEventListener('click', () => this.closeAnimatedThemeCustomization(false));
+        saveBtn?.addEventListener('click', () => this.closeAnimatedThemeCustomization(true));
+        resetBtn?.addEventListener('click', () => this.resetAnimatedThemeDefaults());
+
+        // Close on backdrop click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                this.handleModalClickOutside(
+                    'animatedThemeCustomizeModal',
+                    () => this.closeAnimatedThemeCustomization(true),
+                    () => this.closeAnimatedThemeCustomization(false)
+                );
+            }
+        });
+    }
+
+    openAnimatedThemeCustomization(themeId) {
+        const settings = this.getAnimatedThemeCustomizableSettings()[themeId];
+        if (!settings) return;
+
+        this.currentCustomizingTheme = themeId;
+
+        // Update modal title
+        document.getElementById('customizeThemeName').textContent = settings.title;
+
+        // Build the customization UI
+        const body = document.getElementById('animatedThemeCustomizeBody');
+        const currentSettings = this.animatedThemeSettings[themeId] || this.getAnimatedThemeDefaults()[themeId];
+        const defaults = this.getAnimatedThemeDefaults()[themeId];
+
+        body.innerHTML = `
+            <div class="theme-customize-section">
+                <h4><i class="fas ${settings.icon}"></i> Animation Settings</h4>
+                ${settings.settings.map(setting => this.renderCustomizeSetting(setting, currentSettings[setting.id], defaults[setting.id])).join('')}
+            </div>
+            <div class="customize-preview">
+                <div class="customize-preview-label">Live Preview</div>
+                <div class="customize-preview-box" id="customizePreviewBox"></div>
+            </div>
+        `;
+
+        // Bind slider events and reset buttons
+        settings.settings.forEach(setting => {
+            if (setting.type === 'slider') {
+                const slider = document.getElementById(`customize_${setting.id}`);
+                const valueDisplay = document.getElementById(`customize_${setting.id}_value`);
+                const resetBtn = document.getElementById(`reset_${setting.id}`);
+
+                if (slider && valueDisplay) {
+                    slider.addEventListener('input', () => {
+                        valueDisplay.textContent = slider.value + setting.unit;
+                        this.previewAnimatedThemeSetting(themeId, setting.id, parseFloat(slider.value));
+                        this.updateSettingResetButton(setting.id, parseFloat(slider.value), defaults[setting.id]);
+                    });
+                }
+
+                if (resetBtn) {
+                    resetBtn.addEventListener('click', () => {
+                        const defaultValue = defaults[setting.id];
+                        slider.value = defaultValue;
+                        valueDisplay.textContent = defaultValue + setting.unit;
+                        this.previewAnimatedThemeSetting(themeId, setting.id, defaultValue);
+                        this.updateSettingResetButton(setting.id, defaultValue, defaultValue);
+                    });
+                }
+            } else if (setting.type === 'toggle') {
+                const toggle = document.getElementById(`customize_${setting.id}`);
+                const resetBtn = document.getElementById(`reset_${setting.id}`);
+
+                if (toggle) {
+                    toggle.addEventListener('change', () => {
+                        this.previewAnimatedThemeSetting(themeId, setting.id, toggle.checked);
+                        this.updateSettingResetButton(setting.id, toggle.checked, defaults[setting.id]);
+                    });
+                }
+
+                if (resetBtn) {
+                    resetBtn.addEventListener('click', () => {
+                        const defaultValue = defaults[setting.id];
+                        toggle.checked = defaultValue;
+                        this.previewAnimatedThemeSetting(themeId, setting.id, defaultValue);
+                        this.updateSettingResetButton(setting.id, defaultValue, defaultValue);
+                    });
+                }
+            }
+        });
+
+        // Show preview
+        this.updateCustomizePreview(themeId);
+
+        // Show modal
+        document.getElementById('animatedThemeCustomizeModal').classList.add('show');
+    }
+
+    renderCustomizeSetting(setting, value, defaultValue) {
+        const isModified = value !== defaultValue;
+
+        if (setting.type === 'slider') {
+            return `
+                <div class="customize-control">
+                    <div class="customize-control-header">
+                        <span class="customize-control-label">${setting.label}</span>
+                        <div class="customize-control-actions">
+                            <button class="customize-reset-btn ${isModified ? 'visible' : ''}" 
+                                    id="reset_${setting.id}" 
+                                    title="Reset to default (${defaultValue}${setting.unit})">
+                                <i class="fas fa-undo"></i>
+                            </button>
+                            <span class="customize-control-value" id="customize_${setting.id}_value">${value}${setting.unit}</span>
+                        </div>
+                    </div>
+                    <input type="range" class="customize-slider" id="customize_${setting.id}" 
+                           min="${setting.min}" max="${setting.max}" value="${value}">
+                    <div class="customize-control-description">${setting.description}</div>
+                </div>
+            `;
+        } else if (setting.type === 'toggle') {
+            return `
+                <div class="customize-toggle-row">
+                    <div class="customize-toggle-info">
+                        <span class="customize-toggle-label">${setting.label}</span>
+                        <span class="customize-toggle-desc">${setting.description}</span>
+                    </div>
+                    <div class="customize-toggle-actions">
+                        <button class="customize-reset-btn ${isModified ? 'visible' : ''}" 
+                                id="reset_${setting.id}" 
+                                title="Reset to default">
+                            <i class="fas fa-undo"></i>
+                        </button>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="customize_${setting.id}" ${value ? 'checked' : ''}>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            `;
+        }
+        return '';
+    }
+
+    updateSettingResetButton(settingId, currentValue, defaultValue) {
+        const resetBtn = document.getElementById(`reset_${settingId}`);
+        if (resetBtn) {
+            if (currentValue !== defaultValue) {
+                resetBtn.classList.add('visible');
+            } else {
+                resetBtn.classList.remove('visible');
+            }
+        }
+    }
+
+    previewAnimatedThemeSetting(themeId, settingId, value) {
+        // Temporarily apply the setting for live preview
+        if (!this.tempThemeSettings) {
+            this.tempThemeSettings = JSON.parse(JSON.stringify(this.animatedThemeSettings));
+        }
+        if (!this.tempThemeSettings[themeId]) {
+            this.tempThemeSettings[themeId] = { ...this.getAnimatedThemeDefaults()[themeId] };
+        }
+        this.tempThemeSettings[themeId][settingId] = value;
+
+        // Apply to current theme if it's the one being edited
+        if (this.currentTheme === themeId || this.previewTheme === themeId) {
+            this.applyAnimatedThemeCustomizations(this.tempThemeSettings);
+        }
+
+        this.updateCustomizePreview(themeId);
+    }
+
+    updateCustomizePreview(themeId) {
+        const previewBox = document.getElementById('customizePreviewBox');
+        if (!previewBox) return;
+
+        const theme = this.getAnimatedThemes().find(t => t.id === themeId);
+        if (!theme) return;
+
+        // Set up preview with theme colors
+        previewBox.style.background = theme.colors.bg;
+        previewBox.className = `customize-preview-box ${theme.cssClass}`;
+    }
+
+    closeAnimatedThemeCustomization(save) {
+        if (save && this.currentCustomizingTheme && this.tempThemeSettings) {
+            // Save the new settings
+            this.animatedThemeSettings = this.tempThemeSettings;
+            this.saveAnimatedThemeSettings();
+
+            // Refresh animated theme cards to update edited indicators
+            this.renderAnimatedThemeCards();
+            this.showNotification('Theme customization saved!', 'theme');
+        } else {
+            // Revert to original settings
+            this.applyAnimatedThemeCustomizations();
+        }
+
+        this.tempThemeSettings = null;
+        this.currentCustomizingTheme = null;
+        document.getElementById('animatedThemeCustomizeModal').classList.remove('show');
+    }
+
+    resetAnimatedThemeDefaults() {
+        if (!this.currentCustomizingTheme) return;
+
+        const defaults = this.getAnimatedThemeDefaults()[this.currentCustomizingTheme];
+        const settings = this.getAnimatedThemeCustomizableSettings()[this.currentCustomizingTheme];
+
+        if (!defaults || !settings) return;
+
+        // Reset slider and toggle values
+        settings.settings.forEach(setting => {
+            const defaultValue = defaults[setting.id];
+            if (setting.type === 'slider') {
+                const slider = document.getElementById(`customize_${setting.id}`);
+                const valueDisplay = document.getElementById(`customize_${setting.id}_value`);
+                if (slider && valueDisplay) {
+                    slider.value = defaultValue;
+                    valueDisplay.textContent = defaultValue + setting.unit;
+                }
+            } else if (setting.type === 'toggle') {
+                const toggle = document.getElementById(`customize_${setting.id}`);
+                if (toggle) {
+                    toggle.checked = defaultValue;
+                }
+            }
+            // Hide reset button since we're at default
+            this.updateSettingResetButton(setting.id, defaultValue, defaultValue);
+            this.previewAnimatedThemeSetting(this.currentCustomizingTheme, setting.id, defaultValue);
+        });
+
+        this.showNotification('Reset to defaults', 'settings');
+    }
+
+    applyAnimatedThemeCustomizations(settings = null) {
+        const themeSettings = settings || this.animatedThemeSettings;
+        const root = document.documentElement;
+
+        // Apply Galaxy settings
+        if (themeSettings.galaxy) {
+            const g = themeSettings.galaxy;
+            root.style.setProperty('--galaxy-twinkle-speed-1', `${g.twinkleSpeed}s`);
+            root.style.setProperty('--galaxy-twinkle-speed-2', `${g.twinkleSpeed * 1.5}s`);
+            root.style.setProperty('--galaxy-twinkle-speed-3', `${g.twinkleSpeed * 2.5}s`);
+            root.style.setProperty('--galaxy-star-brightness', `${g.starBrightness / 100}`);
+            root.style.setProperty('--galaxy-nebula-intensity', `${g.nebulaIntensity / 100}`);
+
+            // Generate dynamic star backgrounds
+            this.generateGalaxyStars(g);
+        }
+
+        // Apply Aurora settings
+        if (themeSettings.aurora) {
+            const a = themeSettings.aurora;
+            root.style.setProperty('--aurora-animation-speed', `${a.animationSpeed}s`);
+            root.style.setProperty('--aurora-glow-intensity', `${a.glowIntensity}px`);
+            root.style.setProperty('--aurora-pulse-speed', `${a.pulseSpeed}s`);
+        }
+
+        // Apply Ocean settings
+        if (themeSettings['ocean-wave']) {
+            const o = themeSettings['ocean-wave'];
+            root.style.setProperty('--ocean-wave-speed', `${o.waveSpeed}s`);
+            root.style.setProperty('--ocean-wave-height', `${o.waveHeight}px`);
+            root.style.setProperty('--ocean-depth-intensity', `${o.depthIntensity / 100}`);
+        }
+
+        // Apply Sunset settings
+        if (themeSettings['sunset-glow']) {
+            const s = themeSettings['sunset-glow'];
+            root.style.setProperty('--sunset-glow-speed', `${s.glowSpeed}s`);
+            root.style.setProperty('--sunset-glow-intensity', `${s.glowIntensity / 100}`);
+            root.style.setProperty('--sunset-horizon-brightness', `${s.horizonBrightness / 100}`);
+        }
+
+        // Apply Neon settings
+        if (themeSettings['neon-pulse']) {
+            const n = themeSettings['neon-pulse'];
+            root.style.setProperty('--neon-pulse-speed', `${n.pulseSpeed}s`);
+            root.style.setProperty('--neon-glow-intensity', `${n.glowIntensity / 100}`);
+            root.style.setProperty('--neon-flow-speed', `${n.flowSpeed}s`);
+            root.style.setProperty('--neon-border-glow', `${n.borderGlow / 100}`);
+        }
+
+        // Apply Forest settings
+        if (themeSettings['enchanted-forest']) {
+            const f = themeSettings['enchanted-forest'];
+            root.style.setProperty('--forest-sunbeam-speed', `${f.sunbeamSpeed}s`);
+            root.style.setProperty('--forest-sunbeam-intensity', `${f.sunbeamIntensity / 100}`);
+            root.style.setProperty('--forest-mist-density', `${f.mistDensity / 100}`);
+            root.style.setProperty('--forest-mist-speed', `${f.mistSpeed}s`);
+        }
+
+        // Apply Candy settings
+        if (themeSettings.candy) {
+            const c = themeSettings.candy;
+            root.style.setProperty('--candy-swirl-speed', `${c.swirlSpeed}s`);
+            root.style.setProperty('--candy-shimmer-speed', `${c.shimmerSpeed}s`);
+            root.style.setProperty('--candy-color-intensity', `${c.colorIntensity / 100}`);
+        }
+    }
+
+    generateGalaxyStars(settings) {
+        const starCount = settings.starCount || 50;
+        const brightness = settings.starBrightness / 100 || 0.7;
+        const coloredStars = settings.coloredStars !== false;
+        const nebulaIntensity = settings.nebulaIntensity / 100 || 0.4;
+
+        // Generate stars for layer 1 (small distant stars)
+        const layer1Stars = [];
+        for (let i = 0; i < starCount; i++) {
+            const x = Math.random() * 100;
+            const y = Math.random() * 100;
+            const size = 1;
+            layer1Stars.push(`radial-gradient(${size}px ${size}px at ${x.toFixed(1)}% ${y.toFixed(1)}%, white, transparent)`);
+        }
+
+        // Generate stars for layer 2 (medium stars with some colored)
+        const layer2Stars = [];
+        const layer2Count = Math.floor(starCount * 0.7);
+        for (let i = 0; i < layer2Count; i++) {
+            const x = Math.random() * 100;
+            const y = Math.random() * 100;
+            const size = 1.5;
+            const opacity = 0.7 + Math.random() * 0.3;
+
+            let color = `rgba(255,255,255,${opacity})`;
+            if (coloredStars && Math.random() < 0.2) {
+                const colors = [
+                    `rgba(200,180,255,${opacity})`,
+                    `rgba(180,200,255,${opacity})`,
+                    `rgba(255,200,220,${opacity})`
+                ];
+                color = colors[Math.floor(Math.random() * colors.length)];
+            }
+            layer2Stars.push(`radial-gradient(${size}px ${size}px at ${x.toFixed(1)}% ${y.toFixed(1)}%, ${color}, transparent)`);
+        }
+
+        // Generate stars for layer 3 (bright accent stars)
+        const layer3Stars = [];
+        const layer3Count = Math.floor(starCount * 0.3);
+        for (let i = 0; i < layer3Count; i++) {
+            const x = Math.random() * 100;
+            const y = Math.random() * 100;
+            const size = 2 + Math.random();
+
+            let color = 'rgba(255,255,255,1)';
+            if (coloredStars && Math.random() < 0.5) {
+                const colors = [
+                    `rgba(168,85,247,${nebulaIntensity + 0.3})`,
+                    `rgba(139,92,246,${nebulaIntensity + 0.2})`,
+                    `rgba(196,181,253,${nebulaIntensity + 0.3})`
+                ];
+                color = colors[Math.floor(Math.random() * colors.length)];
+            }
+            layer3Stars.push(`radial-gradient(${size.toFixed(1)}px ${size.toFixed(1)}px at ${x.toFixed(1)}% ${y.toFixed(1)}%, ${color}, transparent)`);
+        }
+
+        // Apply the generated backgrounds via CSS custom properties
+        const root = document.documentElement;
+        root.style.setProperty('--galaxy-stars-layer1', layer1Stars.join(','));
+        root.style.setProperty('--galaxy-stars-layer2', layer2Stars.join(','));
+        root.style.setProperty('--galaxy-stars-layer3', layer3Stars.join(','));
     }
 
     // ==================== Sidebar ====================

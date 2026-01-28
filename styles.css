@@ -18,6 +18,46 @@
     --code-text: #f9fafb;
     --active-item-bg: #dbeafe;
     --transition-speed: 0.3s;
+
+    /* Animated Theme Customizable Variables */
+    /* Galaxy */
+    --galaxy-twinkle-speed-1: 3s;
+    --galaxy-twinkle-speed-2: 5s;
+    --galaxy-twinkle-speed-3: 7s;
+    --galaxy-star-brightness: 0.7;
+    --galaxy-nebula-intensity: 0.4;
+
+    /* Aurora */
+    --aurora-animation-speed: 15s;
+    --aurora-glow-intensity: 30px;
+    --aurora-pulse-speed: 4s;
+
+    /* Ocean */
+    --ocean-wave-speed: 8s;
+    --ocean-wave-height: 3px;
+    --ocean-depth-intensity: 0.5;
+
+    /* Sunset */
+    --sunset-glow-speed: 8s;
+    --sunset-glow-intensity: 0.6;
+    --sunset-horizon-brightness: 0.5;
+
+    /* Neon */
+    --neon-pulse-speed: 2s;
+    --neon-glow-intensity: 0.8;
+    --neon-flow-speed: 3s;
+    --neon-border-glow: 0.6;
+
+    /* Forest */
+    --forest-sunbeam-speed: 7s;
+    --forest-sunbeam-intensity: 0.5;
+    --forest-mist-density: 0.4;
+    --forest-mist-speed: 5s;
+
+    /* Candy */
+    --candy-swirl-speed: 6s;
+    --candy-shimmer-speed: 3s;
+    --candy-color-intensity: 0.7;
 }
 
 /* Dark Mode Variables */
@@ -2207,6 +2247,253 @@ body.editor-closed-state .hamburger-btn.floating {
     position: relative;
 }
 
+/* Animated theme customize indicator */
+.theme-card.animated::after {
+    content: '\f013';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    width: 20px;
+    height: 20px;
+    background: rgba(0,0,0,0.5);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 10px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.theme-card.animated:hover::after {
+    opacity: 1;
+}
+
+/* ==================== Animated Theme Customization Modal ==================== */
+
+.theme-customize-section {
+    margin-bottom: 24px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.theme-customize-section:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.theme-customize-section h4 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.theme-customize-section h4 i {
+    color: var(--primary-color);
+}
+
+.customize-control {
+    margin-bottom: 16px;
+}
+
+.customize-control:last-child {
+    margin-bottom: 0;
+}
+
+.customize-control-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.customize-control-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.customize-control-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.customize-control-value {
+    font-size: 13px;
+    color: var(--primary-color);
+    font-weight: 600;
+    min-width: 50px;
+    text-align: right;
+}
+
+.customize-reset-btn {
+    width: 24px;
+    height: 24px;
+    border: none;
+    background: transparent;
+    color: var(--text-light);
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+}
+
+.customize-reset-btn.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.customize-reset-btn:hover {
+    background: var(--bg-color);
+    color: var(--primary-color);
+}
+
+.customize-reset-btn:active {
+    transform: scale(0.95);
+}
+
+.customize-toggle-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.customize-slider {
+    width: 100%;
+    height: 6px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--border-color);
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+}
+
+.customize-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    background: var(--primary-color);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.customize-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
+}
+
+.customize-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    background: var(--primary-color);
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+}
+
+.customize-control-description {
+    font-size: 12px;
+    color: var(--text-light);
+    margin-top: 6px;
+}
+
+.customize-toggle-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.customize-toggle-row:last-child {
+    border-bottom: none;
+}
+
+.customize-toggle-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.customize-toggle-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.customize-toggle-desc {
+    font-size: 12px;
+    color: var(--text-light);
+}
+
+.customize-color-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.customize-color-row:last-child {
+    margin-bottom: 0;
+}
+
+.customize-color-label {
+    flex: 1;
+    font-size: 14px;
+    color: var(--text-color);
+}
+
+.customize-color-picker {
+    width: 40px;
+    height: 30px;
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    padding: 0;
+}
+
+.customize-preview {
+    background: var(--bg-color);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-top: 16px;
+    text-align: center;
+}
+
+.customize-preview-label {
+    font-size: 12px;
+    color: var(--text-light);
+    margin-bottom: 8px;
+}
+
+.customize-preview-box {
+    height: 80px;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    position: relative;
+}
+
+#resetThemeDefaultsBtn {
+    margin-right: auto;
+}
+
 /* Animated Theme Styles */
 .theme-card.animated .theme-card-preview {
     position: relative;
@@ -2293,6 +2580,44 @@ body.editor-closed-state .hamburger-btn.floating {
     display: flex;
     align-items: center;
     gap: 6px;
+}
+
+.theme-tooltip-customize-hint {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border-color);
+    font-size: 11px;
+    color: var(--text-light);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-style: italic;
+}
+
+.theme-tooltip-customize-hint i {
+    font-size: 10px;
+    opacity: 0.7;
+}
+
+/* Theme card edited indicator */
+.theme-card-edited {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    width: 18px;
+    height: 18px;
+    background: var(--primary-color);
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 9px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.theme-card.edited .theme-card-edited {
+    display: flex;
 }
 
 /* ==================== Aurora Theme Animation ==================== */
@@ -3472,7 +3797,7 @@ body.editor-closed-state .hamburger-btn.floating {
     bottom: 0;
     background: linear-gradient(-45deg, #0f0c29, #302b63, #24243e, #0f0c29);
     background-size: 400% 400%;
-    animation: auroraBackground 15s ease infinite;
+    animation: auroraBackground var(--aurora-animation-speed) ease infinite;
     z-index: -9999;
     pointer-events: none;
 }
@@ -3485,7 +3810,13 @@ body.editor-closed-state .hamburger-btn.floating {
 
 .animated-theme.theme-aurora .sidebar,
 .animated-theme.theme-aurora .editor-container {
-    box-shadow: 0 0 30px rgba(139, 92, 246, 0.2);
+    box-shadow: 0 0 var(--aurora-glow-intensity) rgba(139, 92, 246, 0.2);
+    animation: auroraPulse var(--aurora-pulse-speed) ease-in-out infinite;
+}
+
+@keyframes auroraPulse {
+    0%, 100% { box-shadow: 0 0 calc(var(--aurora-glow-intensity) * 0.5) rgba(139, 92, 246, 0.15); }
+    50% { box-shadow: 0 0 var(--aurora-glow-intensity) rgba(139, 92, 246, 0.3); }
 }
 
 /* Ocean Wave Theme */
@@ -3499,9 +3830,9 @@ body.editor-closed-state .hamburger-btn.floating {
     bottom: 0;
     left: -100%;
     width: 300%;
-    height: 3px;
+    height: var(--ocean-wave-height);
     background: linear-gradient(90deg, transparent, rgba(14, 165, 233, 0.6), rgba(125, 211, 252, 0.8), rgba(14, 165, 233, 0.6), transparent);
-    animation: oceanWaveHeader 8s ease-in-out infinite;
+    animation: oceanWaveHeader var(--ocean-wave-speed) ease-in-out infinite;
     z-index: -1;
     pointer-events: none;
 }
@@ -3518,8 +3849,8 @@ body.editor-closed-state .hamburger-btn.floating {
     left: 0;
     right: 0;
     bottom: 0;
-    background: radial-gradient(ellipse at 50% 100%, rgba(14, 165, 233, 0.1) 0%, transparent 50%);
-    animation: oceanDepth 10s ease-in-out infinite;
+    background: radial-gradient(ellipse at 50% 100%, rgba(14, 165, 233, var(--ocean-depth-intensity)) 0%, transparent 50%);
+    animation: oceanDepth calc(var(--ocean-wave-speed) * 1.25) ease-in-out infinite;
     z-index: -9999;
     pointer-events: none;
 }
@@ -3556,22 +3887,29 @@ body.editor-closed-state .hamburger-btn.floating {
 .animated-theme.theme-neon .sidebar,
 .animated-theme.theme-neon .editor-container {
     border-color: #00ff88;
-    box-shadow: 0 0 10px rgba(0, 255, 136, 0.3), inset 0 0 10px rgba(0, 255, 136, 0.05);
-    animation: neonBorderPulse 2s ease-in-out infinite;
+    box-shadow: 0 0 calc(10px * var(--neon-glow-intensity)) rgba(0, 255, 136, 0.3),
+                inset 0 0 calc(10px * var(--neon-border-glow)) rgba(0, 255, 136, 0.05);
+    animation: neonBorderPulse var(--neon-pulse-speed) ease-in-out infinite;
 }
 
 @keyframes neonBorderPulse {
-    0%, 100% { box-shadow: 0 0 5px rgba(0, 255, 136, 0.3), inset 0 0 5px rgba(0, 255, 136, 0.05); }
-    50% { box-shadow: 0 0 20px rgba(0, 255, 136, 0.5), inset 0 0 15px rgba(0, 255, 136, 0.1); }
+    0%, 100% {
+        box-shadow: 0 0 calc(5px * var(--neon-glow-intensity)) rgba(0, 255, 136, 0.3),
+                    inset 0 0 calc(5px * var(--neon-border-glow)) rgba(0, 255, 136, 0.05);
+    }
+    50% {
+        box-shadow: 0 0 calc(20px * var(--neon-glow-intensity)) rgba(0, 255, 136, 0.5),
+                    inset 0 0 calc(15px * var(--neon-border-glow)) rgba(0, 255, 136, 0.1);
+    }
 }
 
 .animated-theme.theme-neon .toolbar button:hover {
-    box-shadow: 0 0 10px var(--primary-color);
+    box-shadow: 0 0 calc(10px * var(--neon-glow-intensity)) var(--primary-color);
 }
 
 .animated-theme.theme-neon .btn-primary {
-    box-shadow: 0 0 15px var(--primary-color);
-    animation: neonButtonPulse 1.5s ease-in-out infinite;
+    box-shadow: 0 0 calc(15px * var(--neon-glow-intensity)) var(--primary-color);
+    animation: neonButtonPulse calc(var(--neon-pulse-speed) * 0.75) ease-in-out infinite;
 }
 
 @keyframes neonButtonPulse {
@@ -3587,15 +3925,15 @@ body.editor-closed-state .hamburger-btn.floating {
     left: 0;
     right: 0;
     bottom: 0;
-    background: radial-gradient(ellipse at 30% 20%, rgba(34, 197, 94, 0.1) 0%, transparent 50%),
-                radial-gradient(ellipse at 70% 80%, rgba(34, 197, 94, 0.08) 0%, transparent 40%);
-    animation: forestLightDance 8s ease-in-out infinite;
+    background: radial-gradient(ellipse at 30% 20%, rgba(34, 197, 94, var(--forest-sunbeam-intensity)) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 80%, rgba(34, 197, 94, calc(var(--forest-mist-density) * 0.8)) 0%, transparent 40%);
+    animation: forestLightDance var(--forest-sunbeam-speed) ease-in-out infinite;
     z-index: -9999;
     pointer-events: none;
 }
 
 @keyframes forestLightDance {
-    0%, 100% { opacity: 0.5; transform: scale(1); }
+    0%, 100% { opacity: calc(var(--forest-mist-density) * 1.25); transform: scale(1); }
     50% { opacity: 1; transform: scale(1.1); }
 }
 
@@ -3612,7 +3950,7 @@ body.editor-closed-state .hamburger-btn.floating {
     left: 0;
     right: 0;
     bottom: 0;
-    background:
+    background: var(--galaxy-stars-layer1,
         radial-gradient(1px 1px at 5% 15%, white, transparent),
         radial-gradient(1px 1px at 12% 45%, white, transparent),
         radial-gradient(1px 1px at 18% 75%, white, transparent),
@@ -3627,10 +3965,12 @@ body.editor-closed-state .hamburger-btn.floating {
         radial-gradient(1px 1px at 78% 70%, white, transparent),
         radial-gradient(1px 1px at 85% 20%, white, transparent),
         radial-gradient(1px 1px at 92% 50%, white, transparent),
-        radial-gradient(1px 1px at 97% 80%, white, transparent);
-    animation: starTwinkle1 3s ease-in-out infinite;
+        radial-gradient(1px 1px at 97% 80%, white, transparent)
+    );
+    animation: starTwinkle1 var(--galaxy-twinkle-speed-1) ease-in-out infinite;
     z-index: -9999;
     pointer-events: none;
+    opacity: var(--galaxy-star-brightness);
 }
 
 /* Layer 2: Medium stars - medium twinkle */
@@ -3641,7 +3981,7 @@ body.editor-closed-state .hamburger-btn.floating {
     left: 0;
     right: 0;
     bottom: 0;
-    background:
+    background: var(--galaxy-stars-layer2,
         radial-gradient(1.5px 1.5px at 8% 35%, rgba(255,255,255,0.9), transparent),
         radial-gradient(1.5px 1.5px at 22% 60%, rgba(255,255,255,0.8), transparent),
         radial-gradient(1.5px 1.5px at 35% 15%, rgba(255,255,255,0.9), transparent),
@@ -3651,10 +3991,12 @@ body.editor-closed-state .hamburger-btn.floating {
         radial-gradient(1.5px 1.5px at 88% 55%, rgba(255,255,255,0.9), transparent),
         radial-gradient(2px 2px at 15% 88%, rgba(200,180,255,0.8), transparent),
         radial-gradient(2px 2px at 55% 22%, rgba(180,200,255,0.8), transparent),
-        radial-gradient(2px 2px at 82% 72%, rgba(255,200,220,0.7), transparent);
-    animation: starTwinkle2 5s ease-in-out infinite 1s;
+        radial-gradient(2px 2px at 82% 72%, rgba(255,200,220,0.7), transparent)
+    );
+    animation: starTwinkle2 var(--galaxy-twinkle-speed-2) ease-in-out infinite 1s;
     z-index: -9998;
     pointer-events: none;
+    opacity: var(--galaxy-star-brightness);
 }
 
 /* Layer 3: Bright accent stars - slow shimmer */
@@ -3665,14 +4007,15 @@ body.editor-closed-state .hamburger-btn.floating {
     left: 0;
     right: 0;
     bottom: 0;
-    background:
+    background: var(--galaxy-stars-layer3,
         radial-gradient(2px 2px at 3% 28%, rgba(168,85,247,0.9), transparent),
         radial-gradient(2.5px 2.5px at 27% 12%, rgba(255,255,255,1), transparent),
         radial-gradient(2px 2px at 43% 92%, rgba(139,92,246,0.8), transparent),
         radial-gradient(2.5px 2.5px at 67% 8%, rgba(255,255,255,0.9), transparent),
         radial-gradient(2px 2px at 83% 45%, rgba(196,181,253,0.9), transparent),
-        radial-gradient(3px 3px at 95% 88%, rgba(255,255,255,1), transparent);
-    animation: starTwinkle3 7s ease-in-out infinite 2s;
+        radial-gradient(3px 3px at 95% 88%, rgba(255,255,255,1), transparent)
+    );
+    animation: starTwinkle3 var(--galaxy-twinkle-speed-3) ease-in-out infinite 2s;
     z-index: -9997;
     pointer-events: none;
 }
@@ -3704,14 +4047,19 @@ body.editor-closed-state .hamburger-btn.floating {
 
 .animated-theme.theme-galaxy .sidebar,
 .animated-theme.theme-galaxy .editor-container {
-    box-shadow: 0 0 30px rgba(168, 85, 247, 0.2);
+    box-shadow: 0 0 calc(30px * var(--galaxy-nebula-intensity)) rgba(168, 85, 247, 0.2);
 }
 
 /* Candy Swirl Theme */
 .animated-theme.theme-candy .header {
-    background: linear-gradient(90deg, #fdf2f8, #fce7f3, #fbcfe8, #fce7f3, #fdf2f8);
+    background: linear-gradient(90deg,
+        rgba(253, 242, 248, var(--candy-color-intensity)),
+        rgba(252, 231, 243, var(--candy-color-intensity)),
+        rgba(251, 207, 232, var(--candy-color-intensity)),
+        rgba(252, 231, 243, var(--candy-color-intensity)),
+        rgba(253, 242, 248, var(--candy-color-intensity)));
     background-size: 200% 100%;
-    animation: candyHeaderSwirl 5s linear infinite;
+    animation: candyHeaderSwirl var(--candy-swirl-speed) linear infinite;
 }
 
 @keyframes candyHeaderSwirl {
@@ -3722,7 +4070,7 @@ body.editor-closed-state .hamburger-btn.floating {
 .animated-theme.theme-candy .btn-primary {
     background: linear-gradient(90deg, #ec4899, #f472b6, #ec4899);
     background-size: 200% 100%;
-    animation: candyButtonShimmer 2s linear infinite;
+    animation: candyButtonShimmer var(--candy-shimmer-speed) linear infinite;
     border: none;
 }
 
