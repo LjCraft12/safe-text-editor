@@ -4356,12 +4356,14 @@ class WYSIWYGEditor {
         if (aboutModalClose) {
             aboutModalClose.addEventListener('click', () => {
                 aboutModal.classList.remove('show');
+                this.resetSecretClickCounter();
             });
         }
 
         if (aboutCloseBtn) {
             aboutCloseBtn.addEventListener('click', () => {
                 aboutModal.classList.remove('show');
+                this.resetSecretClickCounter();
             });
         }
 
@@ -4378,9 +4380,13 @@ class WYSIWYGEditor {
             aboutModal.addEventListener('click', (e) => {
                 if (e.target === aboutModal) {
                     aboutModal.classList.remove('show');
+                    this.resetSecretClickCounter();
                 }
             });
         }
+
+        // Initialize secret system defaults trigger
+        this.initSecretSystemDefaults();
 
         // Documentation navigation
         document.querySelectorAll('.docs-nav-header').forEach(btn => {
@@ -7782,6 +7788,222 @@ ${content}
                 this.displayToast(message, category);
                 break;
         }
+    }
+
+    // ==================== Secret System Defaults (Easter Egg) ====================
+
+    initSecretSystemDefaults() {
+        this.secretClickCount = 0;
+        this.secretClickTimer = null;
+        this.secretTimeWindow = 3000; // 3 seconds
+        this.secretRequiredClicks = 5;
+
+        const aboutLogo = document.getElementById('aboutLogoTrigger');
+        const systemDefaultsModal = document.getElementById('systemDefaultsModal');
+        const systemDefaultsClose = document.getElementById('systemDefaultsClose');
+
+        if (aboutLogo) {
+            aboutLogo.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.handleSecretClick(aboutLogo);
+            });
+        }
+
+        if (systemDefaultsClose) {
+            systemDefaultsClose.addEventListener('click', () => {
+                this.closeSystemDefaults();
+            });
+        }
+
+        if (systemDefaultsModal) {
+            systemDefaultsModal.addEventListener('click', (e) => {
+                if (e.target === systemDefaultsModal || e.target.classList.contains('system-defaults-overlay')) {
+                    this.closeSystemDefaults();
+                }
+            });
+        }
+    }
+
+    handleSecretClick(logoElement) {
+        this.secretClickCount++;
+
+        // Clear existing timer
+        if (this.secretClickTimer) {
+            clearTimeout(this.secretClickTimer);
+        }
+
+        // Visual hints on clicks 3 and 4
+        if (this.secretClickCount === 3) {
+            logoElement.classList.add('hint-glow');
+            setTimeout(() => logoElement.classList.remove('hint-glow'), 400);
+        } else if (this.secretClickCount === 4) {
+            logoElement.classList.add('hint-shake');
+            setTimeout(() => logoElement.classList.remove('hint-shake'), 400);
+        }
+
+        // Check if target reached
+        if (this.secretClickCount >= this.secretRequiredClicks) {
+            this.openSystemDefaults();
+            this.resetSecretClickCounter();
+            return;
+        }
+
+        // Reset counter after time window
+        this.secretClickTimer = setTimeout(() => {
+            this.resetSecretClickCounter();
+        }, this.secretTimeWindow);
+    }
+
+    resetSecretClickCounter() {
+        this.secretClickCount = 0;
+        if (this.secretClickTimer) {
+            clearTimeout(this.secretClickTimer);
+            this.secretClickTimer = null;
+        }
+    }
+
+    openSystemDefaults() {
+        const modal = document.getElementById('systemDefaultsModal');
+        const aboutModal = document.getElementById('aboutModal');
+
+        // Close about modal
+        if (aboutModal) {
+            aboutModal.classList.remove('show');
+        }
+
+        // Populate system constants
+        this.populateSystemDefaults();
+
+        // Update timestamp
+        const timestamp = document.getElementById('systemTimestamp');
+        if (timestamp) {
+            const now = new Date();
+            timestamp.textContent = `ACCESS_TIME: ${now.toISOString()}`;
+        }
+
+        // Show modal with spectacular entrance
+        if (modal) {
+            modal.classList.add('show');
+
+            // Add random glitch effects
+            this.startTerminalGlitchEffects();
+        }
+    }
+
+    closeSystemDefaults() {
+        const modal = document.getElementById('systemDefaultsModal');
+        if (modal) {
+            modal.classList.remove('show');
+            modal.classList.add('closing');
+
+            // Stop glitch effects
+            this.stopTerminalGlitchEffects();
+
+            setTimeout(() => {
+                modal.classList.remove('closing');
+            }, 600);
+        }
+    }
+
+    startTerminalGlitchEffects() {
+        const terminal = document.getElementById('systemDefaultsTerminal');
+        if (!terminal) return;
+
+        this.glitchInterval = setInterval(() => {
+            if (Math.random() < 0.15) { // 15% chance every interval
+                terminal.classList.add('glitch-effect');
+                setTimeout(() => {
+                    terminal.classList.remove('glitch-effect');
+                }, 150);
+            }
+        }, 2000);
+    }
+
+    stopTerminalGlitchEffects() {
+        if (this.glitchInterval) {
+            clearInterval(this.glitchInterval);
+            this.glitchInterval = null;
+        }
+    }
+
+    populateSystemDefaults() {
+        const terminal = document.getElementById('systemDefaultsTerminal');
+        if (!terminal) return;
+
+        // System constants - read-only engine values
+        const systemConstants = {
+            'PERFORMANCE_CONSTANTS': {
+                'DEBOUNCE_DELAY_MS': { value: 200, type: 'number', desc: 'Input debounce timing' },
+                'ANIMATION_FRAME_RATE': { value: 60, type: 'number', desc: 'Target FPS for animations' },
+                'TOAST_FADE_DURATION_MS': { value: 300, type: 'number', desc: 'Toast exit animation' },
+                'MODAL_TRANSITION_MS': { value: 200, type: 'number', desc: 'Modal slide-in timing' },
+                'SIDEBAR_TRANSITION_MS': { value: 400, type: 'number', desc: 'Sidebar resize easing' },
+                'SCROLL_THROTTLE_MS': { value: 16, type: 'number', desc: '~60fps scroll handling' }
+            },
+            'HARD_LIMITS': {
+                'MAX_LOCALSTORAGE_MB': { value: 5, type: 'number', desc: 'Browser localStorage quota' },
+                'MAX_DOCUMENT_CHARS': { value: 500000, type: 'number', desc: 'Per-document character limit' },
+                'MAX_AUTOSAVE_COUNT': { value: 50, type: 'number', desc: 'Absolute autosave ceiling' },
+                'MAX_CUSTOM_FLAGS': { value: 20, type: 'number', desc: 'User-created flag limit' },
+                'MAX_FOLDERS': { value: 100, type: 'number', desc: 'Folder hierarchy limit' },
+                'MAX_STAR_DENSITY': { value: 5000, type: 'number', desc: 'Galaxy theme star cap' },
+                'MAX_UNDO_STACK': { value: 100, type: 'number', desc: 'History state limit' }
+            },
+            'LOGIC_RATIOS': {
+                'READING_TIME_WPM': { value: 200, type: 'number', desc: 'Words per minute estimate' },
+                'READING_TIME_MULTIPLIER': { value: 1.0, type: 'number', desc: 'Adjustment coefficient' },
+                'STATUS_BAR_HEIGHT_PX': { value: 36, type: 'number', desc: 'Fixed footer height' },
+                'FOOTNOTE_TRAY_MIN_PX': { value: 48, type: 'number', desc: 'Collapsed tray size' },
+                'TOOLBAR_BUTTON_SIZE_PX': { value: 32, type: 'number', desc: 'Tool icon dimensions' },
+                'TOAST_GAP_PX': { value: 12, type: 'number', desc: 'Stacked toast spacing' }
+            },
+            'ENVIRONMENT_INFO': {
+                'ENGINE_VERSION': { value: '1.0.0', type: 'string', desc: 'Core editor build' },
+                'JS_RUNTIME': { value: 'Vanilla ES6+', type: 'string', desc: 'No framework dependency' },
+                'CSS_ENGINE': { value: 'CSS3 + Custom Props', type: 'string', desc: 'Styling architecture' },
+                'ANIMATION_ENGINE': { value: 'CSS Keyframes + RAF', type: 'string', desc: 'Motion system' },
+                'STORAGE_DRIVER': { value: 'localStorage', type: 'string', desc: 'Persistence layer' },
+                'BUILD_DATE': { value: '2026-01-28', type: 'string', desc: 'Last compile date' }
+            },
+            'INTERNAL_TIMERS': {
+                'AUTOSAVE_CHECK_INTERVAL_MS': { value: 1000, type: 'number', desc: 'Save trigger polling' },
+                'SPELLCHECK_DELAY_MS': { value: 500, type: 'number', desc: 'Post-input check delay' },
+                'TOOLTIP_SHOW_DELAY_MS': { value: 1000, type: 'number', desc: 'Hover tooltip timing' },
+                'CONTEXT_MENU_FADE_MS': { value: 150, type: 'number', desc: 'Right-click menu transition' },
+                'SEARCH_DEBOUNCE_MS': { value: 300, type: 'number', desc: 'Docs search throttle' }
+            },
+            'MEMORY_MANAGEMENT': {
+                'MAX_TOAST_QUEUE': { value: 10, type: 'number', desc: 'Pending notification cap' },
+                'DOM_CLEANUP_DELAY_MS': { value: 300, type: 'number', desc: 'Post-remove GC window' },
+                'EVENT_LISTENER_LIMIT': { value: 1000, type: 'number', desc: 'Registered handler cap' },
+                'ANIMATION_POOL_SIZE': { value: 50, type: 'number', desc: 'Concurrent animation limit' }
+            }
+        };
+
+        let html = '';
+
+        for (const [sectionName, sectionData] of Object.entries(systemConstants)) {
+            html += `<div class="terminal-section">`;
+            html += `<div class="terminal-section-header">${sectionName}</div>`;
+
+            for (const [key, data] of Object.entries(sectionData)) {
+                const valueClass = data.type === 'number' ? 'number' : 
+                                   data.type === 'string' ? 'string' : 
+                                   data.type === 'boolean' ? 'boolean' : '';
+
+                const displayValue = data.type === 'string' ? `"${data.value}"` : data.value;
+
+                html += `<div class="terminal-row">`;
+                html += `<span class="terminal-key">${key}</span>`;
+                html += `<span class="terminal-value ${valueClass}">${displayValue}</span>`;
+                html += `<span class="terminal-comment">// ${data.desc}</span>`;
+                html += `</div>`;
+            }
+
+            html += `</div>`;
+        }
+
+        terminal.innerHTML = html;
     }
 }
 

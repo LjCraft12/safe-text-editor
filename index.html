@@ -1861,7 +1861,7 @@
                 <button class="modal-close" id="aboutModalClose">&times;</button>
             </div>
             <div class="modal-body about-body">
-                <div class="about-logo">
+                <div class="about-logo" id="aboutLogoTrigger">
                     <i class="fas fa-feather-alt"></i>
                 </div>
                 <h2 class="about-title">Safe Text Editor</h2>
@@ -1882,6 +1882,39 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-primary" id="aboutCloseBtn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Secret System Defaults Modal (Easter Egg) -->
+    <div class="modal system-defaults-modal" id="systemDefaultsModal">
+        <div class="system-defaults-overlay" id="systemDefaultsOverlay"></div>
+        <div class="system-defaults-content" id="systemDefaultsContent">
+            <div class="system-defaults-header">
+                <div class="system-defaults-title">
+                    <span class="glitch-text" data-text="SYSTEM_DEFAULTS">SYSTEM_DEFAULTS</span>
+                    <span class="system-badge">DIAGNOSTIC MODE</span>
+                </div>
+                <button class="system-defaults-close" id="systemDefaultsClose">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="system-defaults-body">
+                <div class="terminal-window">
+                    <div class="terminal-header">
+                        <span class="terminal-dot red"></span>
+                        <span class="terminal-dot yellow"></span>
+                        <span class="terminal-dot green"></span>
+                        <span class="terminal-title">safe-text-editor://system/constants</span>
+                    </div>
+                    <div class="terminal-content" id="systemDefaultsTerminal">
+                        <!-- Content populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+            <div class="system-defaults-footer">
+                <span class="system-timestamp" id="systemTimestamp"></span>
+                <span class="system-status">READ-ONLY ACCESS</span>
             </div>
         </div>
     </div>
