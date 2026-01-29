@@ -999,6 +999,102 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="settings-divider-line"></div>
+
+                <div class="settings-section">
+                    <h4><i class="fas fa-clock"></i> Toast Duration</h4>
+                    <p class="settings-description">How long toast notifications stay visible.</p>
+
+                    <div class="toast-duration-setting">
+                        <div class="duration-slider-container">
+                            <input type="range" id="toastDuration" min="1" max="10" step="0.5" value="2" class="duration-slider">
+                            <div class="duration-value-display">
+                                <span id="toastDurationValue">2</span> seconds
+                            </div>
+                        </div>
+                        <div class="duration-presets">
+                            <button type="button" class="duration-preset-btn" data-duration="1">Quick (1s)</button>
+                            <button type="button" class="duration-preset-btn active" data-duration="2">Normal (2s)</button>
+                            <button type="button" class="duration-preset-btn" data-duration="4">Long (4s)</button>
+                            <button type="button" class="duration-preset-btn" data-duration="6">Extended (6s)</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-divider-line"></div>
+
+                <div class="settings-section">
+                    <h4><i class="fas fa-map-marker-alt"></i> Toast Position</h4>
+                    <p class="settings-description">Where notifications appear on screen.</p>
+
+                    <div class="toast-position-grid">
+                        <button type="button" class="toast-position-btn" data-position="top-left" title="Top Left">
+                            <i class="fas fa-arrow-up"></i>
+                            <i class="fas fa-arrow-left"></i>
+                        </button>
+                        <button type="button" class="toast-position-btn" data-position="top-right" title="Top Right">
+                            <i class="fas fa-arrow-up"></i>
+                            <i class="fas fa-arrow-right"></i>
+                        </button>
+                        <button type="button" class="toast-position-btn" data-position="bottom-left" title="Bottom Left">
+                            <i class="fas fa-arrow-down"></i>
+                            <i class="fas fa-arrow-left"></i>
+                        </button>
+                        <button type="button" class="toast-position-btn active" data-position="bottom-right" title="Bottom Right">
+                            <i class="fas fa-arrow-down"></i>
+                            <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="settings-divider-line"></div>
+
+                <div class="settings-section">
+                    <h4><i class="fas fa-layer-group"></i> Notification Behavior</h4>
+                    <p class="settings-description">How multiple notifications are handled.</p>
+
+                    <div class="toast-behavior-options">
+                        <label class="toast-behavior-option">
+                            <input type="radio" name="toastBehavior" value="stack" checked>
+                            <div class="behavior-option-content">
+                                <div class="behavior-option-header">
+                                    <i class="fas fa-bars"></i>
+                                    <span>Stack</span>
+                                </div>
+                                <p>Multiple toasts visible at once, stacked vertically</p>
+                            </div>
+                        </label>
+                        <label class="toast-behavior-option">
+                            <input type="radio" name="toastBehavior" value="clear">
+                            <div class="behavior-option-content">
+                                <div class="behavior-option-header">
+                                    <i class="fas fa-exchange-alt"></i>
+                                    <span>Replace</span>
+                                </div>
+                                <p>New toast instantly replaces the current one</p>
+                            </div>
+                        </label>
+                        <label class="toast-behavior-option">
+                            <input type="radio" name="toastBehavior" value="queue">
+                            <div class="behavior-option-content">
+                                <div class="behavior-option-header">
+                                    <i class="fas fa-stream"></i>
+                                    <span>Queue</span>
+                                </div>
+                                <p>One at a time, others wait in line</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="settings-divider-line"></div>
+
+                <div class="settings-section">
+                    <button type="button" class="btn btn-secondary btn-sm" id="testToastBtn">
+                        <i class="fas fa-bell"></i> Test Notification
+                    </button>
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" id="toastSettingsCancelBtn">Cancel</button>

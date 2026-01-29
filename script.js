@@ -48,6 +48,7 @@ class WYSIWYGEditor {
 
         // Toast settings state
         this.toastSettings = this.loadToastSettings();
+        this.initToastService(); // Initialize toast service
 
         // Folder state
         this.folders = this.loadFolders();
@@ -3369,11 +3370,7 @@ class WYSIWYGEditor {
 
     loadToastSettings() {
         const saved = localStorage.getItem('wysiwyg_toast_settings');
-        if (saved) {
-            return JSON.parse(saved);
-        }
-        // Default settings - all enabled
-        return {
+        const defaults = {
             enabled: true,
             autoSave: true,
             docSave: true,
@@ -3381,12 +3378,187 @@ class WYSIWYGEditor {
             theme: true,
             settings: true,
             spellcheck: true,
-            docBar: true
+            docBar: true,
+            duration: 2,
+            position: 'bottom-right', // 'top-right', 'top-left', 'bottom-right', 'bottom-left'
+            deliveryMode: 'stack' // 'stack', 'clear', 'queue'
         };
+
+        if (saved) {
+            const settings = JSON.parse(saved);
+            // Merge with defaults for backwards compatibility
+            return { ...defaults, ...settings };
+        }
+        return defaults;
     }
 
     saveToastSettings() {
         localStorage.setItem('wysiwyg_toast_settings', JSON.stringify(this.toastSettings));
+    }
+
+    // ==================== Toast Service ====================
+
+    initToastService() {
+        this.activeToasts = [];
+        this.toastQueue = [];
+        this.toastIdCounter = 0;
+        this.toastGap = 12; // Gap between stacked toasts in pixels
+    }
+
+    createToastElement(message, toastId) {
+        const toast = document.createElement('div');
+        toast.className = 'toast-notification';
+        toast.dataset.toastId = toastId;
+
+        // Add position class
+        toast.classList.add(`toast-${this.toastSettings.position}`);
+
+        // Create content wrapper
+        const content = document.createElement('span');
+        content.className = 'toast-content';
+        content.textContent = message;
+
+        // Create close button
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'toast-close-btn';
+        closeBtn.innerHTML = '<i class="fas fa-times"></i>';
+        closeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.dismissToast(toastId);
+        });
+
+        toast.appendChild(content);
+        toast.appendChild(closeBtn);
+
+        return toast;
+    }
+
+    calculateToastPosition(index) {
+        const position = this.toastSettings.position;
+        const baseOffset = 20;
+        let offset = baseOffset;
+
+        // Calculate offset based on existing toasts
+        for (let i = 0; i < index; i++) {
+            const existingToast = this.activeToasts[i]?.element;
+            if (existingToast) {
+                offset += existingToast.offsetHeight + this.toastGap;
+            }
+        }
+
+        return offset;
+    }
+
+    positionToast(toast, index) {
+        const position = this.toastSettings.position;
+        const offset = this.calculateToastPosition(index);
+
+        // Reset all positions
+        toast.style.top = '';
+        toast.style.bottom = '';
+        toast.style.left = '';
+        toast.style.right = '';
+
+        // Apply position based on setting
+        if (position.includes('top')) {
+            toast.style.top = `${offset}px`;
+        } else {
+            toast.style.bottom = `${offset}px`;
+        }
+
+        if (position.includes('left')) {
+            toast.style.left = '20px';
+            toast.style.right = 'auto';
+        } else {
+            toast.style.right = '20px';
+            toast.style.left = 'auto';
+        }
+    }
+
+    repositionAllToasts() {
+        this.activeToasts.forEach((toastData, index) => {
+            if (toastData.element) {
+                this.positionToast(toastData.element, index);
+            }
+        });
+    }
+
+    dismissToast(toastId, skipQueue = false) {
+        const toastIndex = this.activeToasts.findIndex(t => t.id === toastId);
+        if (toastIndex === -1) return;
+
+        const toastData = this.activeToasts[toastIndex];
+        const toast = toastData.element;
+
+        // Clear the auto-hide timer
+        if (toastData.timer) {
+            clearTimeout(toastData.timer);
+        }
+
+        // Animate out
+        toast.classList.remove('show');
+        toast.classList.add('hiding');
+
+        setTimeout(() => {
+            toast.remove();
+            this.activeToasts.splice(toastIndex, 1);
+
+            // Reposition remaining toasts with animation
+            this.repositionAllToasts();
+
+            // Process queue if in queue mode and not skipping
+            if (!skipQueue && this.toastSettings.deliveryMode === 'queue' && this.toastQueue.length > 0) {
+                const nextToast = this.toastQueue.shift();
+                this.displayToast(nextToast.message, nextToast.category);
+            }
+        }, 300);
+    }
+
+    clearAllToasts() {
+        this.activeToasts.forEach(toastData => {
+            if (toastData.timer) {
+                clearTimeout(toastData.timer);
+            }
+            if (toastData.element) {
+                toastData.element.remove();
+            }
+        });
+        this.activeToasts = [];
+    }
+
+    displayToast(message, category) {
+        const toastId = ++this.toastIdCounter;
+        const toast = this.createToastElement(message, toastId);
+
+        document.body.appendChild(toast);
+
+        // Calculate position based on current active toasts
+        const index = this.activeToasts.length;
+        this.positionToast(toast, index);
+
+        // Store toast data
+        const toastData = {
+            id: toastId,
+            element: toast,
+            message: message,
+            category: category,
+            timer: null
+        };
+
+        this.activeToasts.push(toastData);
+
+        // Trigger show animation
+        requestAnimationFrame(() => {
+            toast.classList.add('show');
+        });
+
+        // Set up auto-dismiss timer
+        const duration = (this.toastSettings.duration || 2) * 1000;
+        toastData.timer = setTimeout(() => {
+            this.dismissToast(toastId);
+        }, duration);
+
+        return toastId;
     }
 
     initToastSettingsModal() {
@@ -3396,6 +3568,8 @@ class WYSIWYGEditor {
         const cancelBtn = document.getElementById('toastSettingsCancelBtn');
         const saveBtn = document.getElementById('toastSettingsSaveBtn');
         const masterToggle = document.getElementById('toastMasterToggle');
+        const durationSlider = document.getElementById('toastDuration');
+        const durationValue = document.getElementById('toastDurationValue');
 
         // Open toast settings from advanced settings
         if (toastSettingsBtn) {
@@ -3438,6 +3612,59 @@ class WYSIWYGEditor {
                 this.updateIndividualToastOptions();
             });
         }
+
+        // Duration slider functionality
+        if (durationSlider && durationValue) {
+            durationSlider.addEventListener('input', () => {
+                const value = parseFloat(durationSlider.value);
+                durationValue.textContent = value;
+                this.updateDurationPresetButtons(value);
+            });
+        }
+
+        // Duration preset buttons
+        document.querySelectorAll('.duration-preset-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const duration = parseFloat(btn.dataset.duration);
+                if (durationSlider && durationValue) {
+                    durationSlider.value = duration;
+                    durationValue.textContent = duration;
+                    this.updateDurationPresetButtons(duration);
+                }
+            });
+        });
+
+        // Position buttons
+        document.querySelectorAll('.toast-position-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.toast-position-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+
+        // Test toast button
+        const testToastBtn = document.getElementById('testToastBtn');
+        if (testToastBtn) {
+            testToastBtn.addEventListener('click', () => {
+                // Temporarily apply current modal settings for testing
+                const tempSettings = { ...this.toastSettings };
+
+                // Get current modal values
+                const durationSlider = document.getElementById('toastDuration');
+                const activePositionBtn = document.querySelector('.toast-position-btn.active');
+                const activeBehaviorRadio = document.querySelector('input[name="toastBehavior"]:checked');
+
+                this.toastSettings.duration = durationSlider ? parseFloat(durationSlider.value) : 2;
+                this.toastSettings.position = activePositionBtn ? activePositionBtn.dataset.position : 'bottom-right';
+                this.toastSettings.deliveryMode = activeBehaviorRadio ? activeBehaviorRadio.value : 'stack';
+
+                // Show test notification
+                this.showNotification('This is a test notification!', 'general');
+
+                // Restore original settings (they'll be saved when user clicks Save)
+                // Note: We don't restore because user might want to see the effect
+            });
+        }
     }
 
     openToastSettings() {
@@ -3457,11 +3684,45 @@ class WYSIWYGEditor {
         document.getElementById('toastSpellcheck').checked = this.toastSettings.spellcheck;
         document.getElementById('toastDocBar').checked = this.toastSettings.docBar;
 
+        // Initialize duration slider
+        const durationSlider = document.getElementById('toastDuration');
+        const durationValue = document.getElementById('toastDurationValue');
+        if (durationSlider && durationValue) {
+            durationSlider.value = this.toastSettings.duration;
+            durationValue.textContent = this.toastSettings.duration;
+            this.updateDurationPresetButtons(this.toastSettings.duration);
+        }
+
+        // Initialize position buttons
+        const position = this.toastSettings.position || 'bottom-right';
+        document.querySelectorAll('.toast-position-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.position === position);
+        });
+
+        // Initialize behavior radio buttons
+        const deliveryMode = this.toastSettings.deliveryMode || 'stack';
+        const behaviorRadio = document.querySelector(`input[name="toastBehavior"][value="${deliveryMode}"]`);
+        if (behaviorRadio) {
+            behaviorRadio.checked = true;
+        }
+
         // Update individual options state
         this.updateIndividualToastOptions();
 
         // Open toast settings modal
         document.getElementById('toastSettingsModal').classList.add('show');
+    }
+
+    updateDurationPresetButtons(duration) {
+        const presetBtns = document.querySelectorAll('.duration-preset-btn');
+        presetBtns.forEach(btn => {
+            const btnDuration = parseFloat(btn.dataset.duration);
+            if (btnDuration === duration) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
     }
 
     updateIndividualToastOptions() {
@@ -3489,6 +3750,18 @@ class WYSIWYGEditor {
     }
 
     saveToastSettingsAndClose() {
+        // Get duration value from slider
+        const durationSlider = document.getElementById('toastDuration');
+        const duration = durationSlider ? parseFloat(durationSlider.value) : 2;
+
+        // Get position from active button
+        const activePositionBtn = document.querySelector('.toast-position-btn.active');
+        const position = activePositionBtn ? activePositionBtn.dataset.position : 'bottom-right';
+
+        // Get delivery mode from radio buttons
+        const activeBehaviorRadio = document.querySelector('input[name="toastBehavior"]:checked');
+        const deliveryMode = activeBehaviorRadio ? activeBehaviorRadio.value : 'stack';
+
         // Save all toast settings
         this.toastSettings = {
             enabled: document.getElementById('toastMasterToggle').checked,
@@ -3498,7 +3771,10 @@ class WYSIWYGEditor {
             theme: document.getElementById('toastTheme').checked,
             settings: document.getElementById('toastSettings').checked,
             spellcheck: document.getElementById('toastSpellcheck').checked,
-            docBar: document.getElementById('toastDocBar').checked
+            docBar: document.getElementById('toastDocBar').checked,
+            duration: duration,
+            position: position,
+            deliveryMode: deliveryMode
         };
 
         this.saveToastSettings();
@@ -4958,22 +5234,30 @@ class WYSIWYGEditor {
                         title: 'Toast Notifications',
                         icon: 'fa-bell',
                         content: `
-                            <p>Control which notifications appear:</p>
+                            <p>Control how notifications appear and behave:</p>
                             <ul>
                                 <li>Click "Toast Settings" in Advanced Settings</li>
-                                <li>Enable/disable the master toggle for all notifications</li>
-                                <li>Toggle individual notification types:
+                                <li><strong>Master Toggle</strong> - Enable/disable all notifications</li>
+                                <li><strong>Individual Types</strong> - Toggle specific notification categories</li>
+                                <li><strong>Duration</strong> - Set how long toasts stay visible (1-10 seconds)</li>
+                                <li><strong>Position</strong> - Choose where toasts appear:
                                     <ul>
-                                        <li>Auto-save notifications</li>
-                                        <li>Document saved</li>
-                                        <li>Document deleted</li>
-                                        <li>Theme changes</li>
-                                        <li>Settings changes</li>
-                                        <li>Spell check</li>
-                                        <li>Document bar</li>
+                                        <li>Top Right, Top Left</li>
+                                        <li>Bottom Right, Bottom Left</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Behavior</strong> - How multiple notifications are handled:
+                                    <ul>
+                                        <li><strong>Stack</strong> - Multiple toasts visible, stacked vertically</li>
+                                        <li><strong>Replace</strong> - New toast instantly replaces the current one</li>
+                                        <li><strong>Queue</strong> - One at a time, others wait in line</li>
                                     </ul>
                                 </li>
                             </ul>
+                            <div class="docs-tip">
+                                <div class="docs-tip-header"><i class="fas fa-lightbulb"></i> Tip</div>
+                                <p>Use the "Test Notification" button to preview your settings!</p>
+                            </div>
                         `
                     },
                     {
@@ -7469,25 +7753,35 @@ ${content}
 
         if (categoryMap[category] === false) return;
 
-        // Create notification element
-        const notification = document.createElement('div');
-        notification.className = 'toast-notification';
-        notification.textContent = message;
+        // Initialize toast service if not already done
+        if (!this.activeToasts) {
+            this.initToastService();
+        }
 
-        document.body.appendChild(notification);
+        const deliveryMode = this.toastSettings.deliveryMode || 'stack';
 
-        // Trigger animation
-        requestAnimationFrame(() => {
-            notification.classList.add('show');
-        });
+        switch (deliveryMode) {
+            case 'clear':
+                // Clear all existing toasts before showing new one
+                this.clearAllToasts();
+                this.displayToast(message, category);
+                break;
 
-        // Remove after 2 seconds
-        setTimeout(() => {
-            notification.classList.remove('show');
-            setTimeout(() => {
-                notification.remove();
-            }, 300);
-        }, 2000);
+            case 'queue':
+                // If a toast is already showing, queue this one
+                if (this.activeToasts.length > 0) {
+                    this.toastQueue.push({ message, category });
+                } else {
+                    this.displayToast(message, category);
+                }
+                break;
+
+            case 'stack':
+            default:
+                // Show multiple toasts stacked
+                this.displayToast(message, category);
+                break;
+        }
     }
 }
 
