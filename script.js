@@ -180,8 +180,81 @@ class WYSIWYGEditor {
         }
     }
 
+    // Cleanup orphaned elements from deprecated features
+    cleanupOrphanedElements() {
+        // Remove any code-block-highlight divs that exist outside of proper code block containers
+        const orphanedHighlights = document.querySelectorAll('.code-block-highlight:not(.code-block-container .code-block-highlight)');
+        orphanedHighlights.forEach(el => {
+            console.log('Removing orphaned code-block-highlight element');
+            el.remove();
+        });
+
+        // Also clean up any code block elements in the editor that are malformed
+        if (this.editor) {
+            const editorCodeBlocks = this.editor.querySelectorAll('.code-block-highlight, .code-block-input, .code-block-content');
+            editorCodeBlocks.forEach(el => {
+                // If not inside a proper code-block-container, remove it
+                if (!el.closest('.code-block-container')) {
+                    console.log('Removing orphaned code block element from editor');
+                    el.remove();
+                }
+            });
+        }
+
+        // Clean up stored documents that might have orphaned code block content
+        this.cleanupStoredDocuments();
+    }
+
+    // Clean up malformed content in stored documents
+    cleanupStoredDocuments() {
+        let documentsChanged = false;
+
+        // Clean saved documents
+        this.documents = this.documents.map(doc => {
+            if (doc.content && doc.content.includes('code-block-highlight')) {
+                // Check if it's malformed (code-block-highlight without proper container)
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = doc.content;
+
+                // Remove orphaned code block elements
+                const orphaned = tempDiv.querySelectorAll('.code-block-highlight:not(.code-block-container .code-block-highlight)');
+                if (orphaned.length > 0) {
+                    orphaned.forEach(el => el.remove());
+                    doc.content = tempDiv.innerHTML;
+                    documentsChanged = true;
+                }
+            }
+            return doc;
+        });
+
+        // Clean auto-save documents
+        this.autoSaveDocuments = this.autoSaveDocuments.map(doc => {
+            if (doc.content && doc.content.includes('code-block-highlight')) {
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = doc.content;
+
+                const orphaned = tempDiv.querySelectorAll('.code-block-highlight:not(.code-block-container .code-block-highlight)');
+                if (orphaned.length > 0) {
+                    orphaned.forEach(el => el.remove());
+                    doc.content = tempDiv.innerHTML;
+                    documentsChanged = true;
+                }
+            }
+            return doc;
+        });
+
+        if (documentsChanged) {
+            this.saveDocuments();
+            this.saveAutoSaveDocuments();
+            console.log('Cleaned up malformed content in stored documents');
+        }
+    }
+
     init() {
         try {
+            // Cleanup any orphaned code block elements from previous sessions
+            this.cleanupOrphanedElements();
+
             this.initThemes();
             this.initAnimatedThemeCustomization();
             this.initSidebar();
